@@ -1,0 +1,9 @@
+# Requirements
+
+This project was written and tested on Ubuntu 18.04 environment.
+
+To compile, libraries GLUT, GLEW, and GLM are required.
+
+```bash
+sudo apt install freeglut3-dev libglew-dev libglm-dev
+```
