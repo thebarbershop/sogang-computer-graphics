@@ -170,12 +170,16 @@ GLfloat house_color[5][3] = {
 	{44 / 255.0f, 180 / 255.0f, 49 / 255.0f},
 };
 
+const size_t n_house = 2;
 std::vector<point> house_positions;
 const std::vector<point> house_initial_positions = {
-	point(1.0f / 3, 0.6f),
+	point(1.0f / 3, 0.65f),
 	point(0.5f, -0.1f),
 }; // initial positions, propotional to win_width and win_height
 const std::vector<GLfloat> house_initial_displacement = {0, INITIAL_HEIGHT *(-0.5)};
+
+std::vector<GLfloat> house_sizes;
+const std::vector<GLfloat> house_initial_sizes = {3.0f, 3.0f};
 
 GLuint VBO_house, VAO_house;
 void prepare_house()
@@ -207,9 +211,10 @@ void prepare_house()
 	glBindVertexArray(0);
 
 	// Initialize house position
-	for (size_t i = 0; i < house_initial_positions.size(); ++i)
+	for (size_t i = 0; i < n_house; ++i)
 	{
 		house_positions.push_back(house_initial_positions[i] * point(win_width, win_height));
+		house_sizes.push_back(house_initial_sizes[i]);
 	}
 }
 
@@ -247,10 +252,10 @@ void display(void)
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_road();
 
-	for (auto &house_position : house_positions)
+	for (size_t i = 0; i < n_house; i++)
 	{
-		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(house_position.x, house_position.y, 0.0f));
-		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 1.0f));
+		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(house_positions[i].x, house_positions[i].y, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(house_sizes[i], house_sizes[i], 1.0f));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_house();
@@ -297,51 +302,6 @@ void special(int key, int x, int y)
 	}
 }
 
-int leftbuttonpressed = 0;
-void mouse(int button, int state, int x, int y)
-{
-	if ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN))
-		leftbuttonpressed = 1;
-	else if ((button == GLUT_LEFT_BUTTON) && (state == GLUT_UP))
-		leftbuttonpressed = 0;
-}
-
-void motion(int x, int y)
-{
-	static int delay = 0;
-	static float tmpx = 0.0, tmpy = 0.0;
-	float dx, dy;
-	if (leftbuttonpressed)
-	{
-		centerx = x - win_width * 0.5f, centery = (win_height - y) - win_height * 0.5f;
-		if (delay == 8)
-		{
-			dx = centerx - tmpx;
-			dy = centery - tmpy;
-
-			if (dx > 0.0)
-			{
-				rotate_angle = atan(dy / dx) + 90.0f * TO_RADIAN;
-			}
-			else if (dx < 0.0)
-			{
-				rotate_angle = atan(dy / dx) - 90.0f * TO_RADIAN;
-			}
-			else if (dx == 0.0)
-			{
-				if (dy > 0.0)
-					rotate_angle = 180.0f * TO_RADIAN;
-				else
-					rotate_angle = 0.0f;
-			}
-			tmpx = centerx, tmpy = centery;
-			delay = 0;
-		}
-		glutPostRedisplay();
-		delay++;
-	}
-}
-
 void reshape(int width, int height)
 {
 	win_width = width, win_height = height;
@@ -364,10 +324,12 @@ void timer(int value)
 	for (size_t i = 0; i < house_positions.size(); ++i)
 	{
 		auto &house_position = house_positions[i];
+		house_sizes[i] *= 1.0005;
 		house_position = house_position.move(angle, -1);
 		if (house_position.x < -win_width * 0.6f || house_position.y < -win_height * 0.6f)
 		{
 			house_position = house_initial_positions[i] * point(win_width, win_height);
+			house_sizes[i] = house_initial_sizes[i];
 		}
 	}
 	glutPostRedisplay();
@@ -388,8 +350,6 @@ void register_callbacks(void)
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(special);
-	glutMouseFunc(mouse);
-	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
 	glutTimerFunc(gameplay_speed, timer, 0);
 	glutCloseFunc(cleanup);
