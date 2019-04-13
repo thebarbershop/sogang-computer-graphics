@@ -52,12 +52,14 @@ struct point
 	GLfloat x, y;
 	point(GLfloat x, GLfloat y) : x(x), y(y) {}
 	point() { point(0.0f, 0.0f); }
-	point move(GLfloat angle, GLfloat length) const
+	point move(GLfloat angle, GLfloat displacement) const
 	{
-		GLfloat x1 = x + length * std::cos(angle);
-		GLfloat y1 = y + length * std::sin(angle);
+		// move the point by given angle and displacement
+		GLfloat x1 = x + displacement * std::cos(angle);
+		GLfloat y1 = y + displacement * std::sin(angle);
 		return point(x1, y1);
 	}
+
 	point operator*(const point &rhs) const
 	{
 		GLfloat x1 = x * rhs.x;
@@ -70,13 +72,33 @@ struct point
 
 int win_width = 0,
 	win_height = 0;
-float centerx = 0.0f, centery = 0.0f, rotate_angle = 0.0f;
 
 //// DESIGN ROAD ////
 
 const unsigned int ROAD_MAIN = 0;
 const unsigned int ROAD_LINE_LEFT = 1;
 const unsigned int ROAD_LINE_RIGHT = 2;
+
+GLfloat road_main_shape[6][2] = {
+	{-0.5f, 0.0f},
+	{(1.0f / 3), 0.5f},
+	{0.5f, 0.5f},
+	{0.5f, 0.0f},
+	{-(1.0f / 3), -0.5f},
+	{-0.5f, -0.5f},
+};
+GLfloat road_line_left_shape[4][2] = {
+	{-0.5f, 0.0f},
+	{1.0f / 3, 0.5f},
+	{23.0f / 60, 0.5f},
+	{-0.5f, -1.0f / 20},
+};
+GLfloat road_line_right_shape[4][2] = {
+	{0.5f, 0.0f},
+	{-1.0f / 3, -0.5f},
+	{-23.0f / 60, -0.5f},
+	{0.5f, 1.0f / 20},
+};
 
 GLfloat road_color[3][3] = {
 	{0x70 / 255.0f, 0x80 / 255.0f, 0x90 / 255.0f},
@@ -88,28 +110,6 @@ GLuint VBO_road, VAO_road;
 
 void prepare_road()
 {
-	GLfloat road_main_shape[6][2] = {
-		{-win_width * 0.5f, 0.0f},
-		{win_width * (1.0f / 3), win_height * 0.5f},
-		{win_width * 0.5f, win_height * 0.5f},
-		{win_width * 0.5f, 0.0f},
-		{-win_width * (1.0f / 3), -win_height * 0.5f},
-		{-win_width * 0.5f, -win_height * 0.5f},
-	};
-	GLfloat road_line_left_shape[4][2] = {
-		{-win_width * 0.5f, 0.0f},
-		{win_width * (1.0f / 3), win_height * 0.5f},
-		{win_width * (1.0f / 3) + win_width * (1.0f / 20), win_height * 0.5f},
-		{-win_width * 0.5f, -win_height * (1.0f / 20)},
-	};
-	GLfloat road_line_right_shape[4][2] = {
-		{win_width * 0.5f, 0.0f},
-		{-win_width * (1.0f / 3), -win_height * 0.5f},
-		{-win_width * (1.0f / 3) - win_width * (1.0f / 20), -win_height * 0.5f},
-		{win_width * 0.5f, win_height * (1.0f / 20)},
-
-	};
-
 	GLsizeiptr buffer_size = sizeof(road_main_shape) + sizeof(road_line_left_shape) + sizeof(road_line_right_shape);
 
 	glGenBuffers(1, &VBO_road);
@@ -178,8 +178,8 @@ const std::vector<point> house_initial_positions = {
 }; // initial positions, propotional to win_width and win_height
 const std::vector<GLfloat> house_initial_displacement = {0, INITIAL_HEIGHT *(-0.5)};
 
-std::vector<GLfloat> house_sizes;
-const std::vector<GLfloat> house_initial_sizes = {3.0f, 3.0f};
+std::vector<point> house_sizes;
+const std::vector<point> house_initial_sizes = {point(3.0f, 3.0f), point(3.0f, 3.0f)};
 
 GLuint VBO_house, VAO_house;
 void prepare_house()
@@ -241,25 +241,134 @@ void draw_house()
 }
 //// DESIGN HOUSE END ////
 
+//// DESIGN CAR ////
+//draw car2
+#define CAR2_BODY 0
+#define CAR2_FRONT_WINDOW 1
+#define CAR2_BACK_WINDOW 2
+#define CAR2_FRONT_WHEEL 3
+#define CAR2_BACK_WHEEL 4
+#define CAR2_LIGHT1 5
+#define CAR2_LIGHT2 6
+
+GLfloat car2_body[8][2] = {{-18.0, -7.0}, {-18.0, 0.0}, {-13.0, 0.0}, {-10.0, 8.0}, {10.0, 8.0}, {13.0, 0.0}, {18.0, 0.0}, {18.0, -7.0}};
+GLfloat car2_front_window[4][2] = {{-10.0, 0.0}, {-8.0, 6.0}, {-2.0, 6.0}, {-2.0, 0.0}};
+GLfloat car2_back_window[4][2] = {{0.0, 0.0}, {0.0, 6.0}, {8.0, 6.0}, {10.0, 0.0}};
+GLfloat car2_front_wheel[8][2] = {{-11.0, -11.0}, {-13.0, -8.0}, {-13.0, -7.0}, {-11.0, -4.0}, {-7.0, -4.0}, {-5.0, -7.0}, {-5.0, -8.0}, {-7.0, -11.0}};
+GLfloat car2_back_wheel[8][2] = {{7.0, -11.0}, {5.0, -8.0}, {5.0, -7.0}, {7.0, -4.0}, {11.0, -4.0}, {13.0, -7.0}, {13.0, -8.0}, {11.0, -11.0}};
+GLfloat car2_light1[3][2] = {{-18.0, -1.0}, {-17.0, -2.0}, {-18.0, -3.0}};
+GLfloat car2_light2[3][2] = {{-18.0, -4.0}, {-17.0, -5.0}, {-18.0, -6.0}};
+
+GLfloat car2_color[7][3] = {
+	{100 / 255.0f, 141 / 255.0f, 159 / 255.0f},
+	{235 / 255.0f, 219 / 255.0f, 208 / 255.0f},
+	{235 / 255.0f, 219 / 255.0f, 208 / 255.0f},
+	{0 / 255.0f, 0 / 255.0f, 0 / 255.0f},
+	{0 / 255.0f, 0 / 255.0f, 0 / 255.0f},
+	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f},
+	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f}};
+
+point car2_position;
+GLfloat car2_displacement = 0.1f;
+point car2_size = point(-4.0f, 4.0f);
+int car2_updown = 0;
+
+GLuint VBO_car2, VAO_car2;
+void prepare_car2()
+{
+	GLsizeiptr buffer_size = sizeof(car2_body) + sizeof(car2_front_window) + sizeof(car2_back_window) + sizeof(car2_front_wheel) + sizeof(car2_back_wheel) + sizeof(car2_light1) + sizeof(car2_light2);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_car2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_car2);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(car2_body), car2_body);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car2_body), sizeof(car2_front_window), car2_front_window);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car2_body) + sizeof(car2_front_window), sizeof(car2_back_window), car2_back_window);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car2_body) + sizeof(car2_front_window) + sizeof(car2_back_window), sizeof(car2_front_wheel), car2_front_wheel);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car2_body) + sizeof(car2_front_window) + sizeof(car2_back_window) + sizeof(car2_front_wheel),
+					sizeof(car2_back_wheel), car2_back_wheel);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car2_body) + sizeof(car2_front_window) + sizeof(car2_back_window) + sizeof(car2_front_wheel) + sizeof(car2_back_wheel), sizeof(car2_light1), car2_light1);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car2_body) + sizeof(car2_front_window) + sizeof(car2_back_window) + sizeof(car2_front_wheel) + sizeof(car2_back_wheel) + sizeof(car2_light1), sizeof(car2_light2), car2_light2);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_car2);
+	glBindVertexArray(VAO_car2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_car2);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	// Initialize car object position
+	car2_position = car2_position.move(-current_angle(), car2_displacement * win_width);
+}
+
+void draw_car2()
+{
+	glBindVertexArray(VAO_car2);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_FRONT_WINDOW]);
+	glDrawArrays(GL_TRIANGLE_FAN, 8, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_BACK_WINDOW]);
+	glDrawArrays(GL_TRIANGLE_FAN, 12, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_FRONT_WHEEL]);
+	glDrawArrays(GL_TRIANGLE_FAN, 16, 8);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_BACK_WHEEL]);
+	glDrawArrays(GL_TRIANGLE_FAN, 24, 8);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_LIGHT1]);
+	glDrawArrays(GL_TRIANGLE_FAN, 32, 3);
+
+	glUniform3fv(loc_primitive_color, 1, car2_color[CAR2_LIGHT2]);
+	glDrawArrays(GL_TRIANGLE_FAN, 35, 3);
+
+	glBindVertexArray(0);
+}
+//// DESIGN CAR END ////
+
 void display(void)
 {
 	glm::mat4 ModelMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	ModelMatrix = glm::mat4(1.0f);
+	// draw road object
+	ModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(win_width, win_height, 1.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_road();
 
+	// draw house objects
 	for (size_t i = 0; i < n_house; i++)
 	{
 		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(house_positions[i].x, house_positions[i].y, 0.0f));
-		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(house_sizes[i], house_sizes[i], 1.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(house_sizes[i].x, house_sizes[i].y, 1.0f));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_house();
 	}
+
+	// draw car object
+	ModelMatrix = glm::mat4(1.0f);
+	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car2_size.x, car2_size.y, 1.0f));
+	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y, 0.0f));
+	ModelMatrix = glm::rotate(ModelMatrix, -current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(0, car2_updown, 0.0f));
+
+	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_car2();
 
 	glFlush();
 }
@@ -276,7 +385,6 @@ void keyboard(unsigned char key, int x, int y)
 
 void special(int key, int x, int y)
 {
-#define SENSITIVITY 2.0
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
@@ -292,28 +400,14 @@ void special(int key, int x, int y)
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_DOWN:
-		centery -= SENSITIVITY;
+		car2_updown -= 2;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_UP:
-		centery += SENSITIVITY;
+		car2_updown += 2;
 		glutPostRedisplay();
 		break;
 	}
-}
-
-void reshape(int width, int height)
-{
-	win_width = width, win_height = height;
-
-	glViewport(0, 0, win_width, win_height);
-	ProjectionMatrix = glm::ortho(-win_width / 2.0, win_width / 2.0,
-								  -win_height / 2.0, win_height / 2.0, -1000.0, 1000.0);
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-
-	prepare_road();
-
-	glutPostRedisplay();
 }
 
 void timer(int value)
@@ -324,7 +418,7 @@ void timer(int value)
 	for (size_t i = 0; i < house_positions.size(); ++i)
 	{
 		auto &house_position = house_positions[i];
-		house_sizes[i] *= 1.0005;
+		house_sizes[i] = house_sizes[i] * point(1.0005f, 1.0005f);
 		house_position = house_position.move(angle, -1);
 		if (house_position.x < -win_width * 0.6f || house_position.y < -win_height * 0.6f)
 		{
@@ -350,8 +444,7 @@ void register_callbacks(void)
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(special);
-	glutReshapeFunc(reshape);
-	glutTimerFunc(gameplay_speed, timer, 0);
+	glutTimerFunc(0, timer, 0);
 	glutCloseFunc(cleanup);
 }
 
@@ -379,12 +472,18 @@ void initialize_OpenGL(void)
 		b = background_color[2];
 	glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
 	ViewMatrix = glm::mat4(1.0f);
+
+	glViewport(0, 0, win_width, win_height);
+	ProjectionMatrix = glm::ortho(-win_width / 2.0, win_width / 2.0,
+								  -win_height / 2.0, win_height / 2.0, -1000.0, 1000.0);
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 
 void prepare_scene(void)
 {
 	prepare_road();
 	prepare_house();
+	prepare_car2();
 }
 
 void initialize_renderer(void)
