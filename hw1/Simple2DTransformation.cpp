@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <vector>
 
 #include "Shaders/LoadShaders.h"
@@ -30,23 +31,22 @@ GLfloat current_angle(void);
 //////////////////////////
 
 //// CUSTUM CONSTANTS ////
-
-const int background_color[] = {173, 255, 47}; // R,G,B value of background color (0-255)
-const GLfloat PI = 3.14159265358979323846;
-const unsigned int MIN_SPEED = 10;
-const unsigned int MAX_SPEED = 20;
+const GLfloat background_color[] = {173 / 255.0f, 255 / 255.0f, 47 / 255.0f}; // R,G,B value of background color (0-255)
+const unsigned int MIN_SPEED = 1;
+const unsigned int MAX_SPEED = 9;
 const unsigned int INITIAL_WIDTH = 1280;
 const unsigned int INITIAL_HEIGHT = 800;
-
 //////////////////////////
 
 //// CUSTUM VARIABLES ////
-unsigned int gameplay_speed = 15; // speed of gameplay
-int health = 5;					  // gameover when health == 0
+unsigned int car_speed = 3;		// car moves 15 per tick
+unsigned int refresh_rate = 30; // redraw screen every 30 ms.
+
+std::random_device rd;
+std::mt19937 gen(rd());
 //////////////////////////
 
 //// CUSTUM DATA STRUCTURE ////
-
 struct point
 {
 	GLfloat x, y;
@@ -67,7 +67,6 @@ struct point
 		return point(x1, y1);
 	}
 };
-
 ///////////////////////////////
 
 int win_width = 0,
@@ -269,7 +268,7 @@ GLfloat car2_color[7][3] = {
 	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f}};
 
 point car2_position;
-GLfloat car2_displacement = 0.1f;
+GLfloat car2_displacement = -.4f;
 point car2_size = point(-4.0f, 4.0f);
 int car2_updown = 0;
 
@@ -305,7 +304,7 @@ void prepare_car2()
 	glBindVertexArray(0);
 
 	// Initialize car object position
-	car2_position = car2_position.move(-current_angle(), car2_displacement * win_width);
+	car2_position = car2_position.move(0, car2_displacement * win_width);
 }
 
 void draw_car2()
@@ -337,6 +336,106 @@ void draw_car2()
 }
 //// DESIGN CAR END ////
 
+//// DESIGN SWORD ////
+const unsigned int SWORD_BODY = 0;
+const unsigned int SWORD_BODY2 = 1;
+const unsigned int SWORD_HEAD = 2;
+const unsigned int SWORD_HEAD2 = 3;
+const unsigned int SWORD_IN = 4;
+const unsigned int SWORD_DOWN = 5;
+const unsigned int SWORD_BODY_IN = 6;
+
+GLfloat sword_body[4][2] = {{-6.0, 0.0}, {-6.0, -4.0}, {6.0, -4.0}, {6.0, 0.0}};
+GLfloat sword_body2[4][2] = {{-2.0, -4.0}, {-2.0, -6.0}, {2.0, -6.0}, {2.0, -4.0}};
+GLfloat sword_head[4][2] = {{-2.0, 0.0}, {-2.0, 16.0}, {2.0, 16.0}, {2.0, 0.0}};
+GLfloat sword_head2[3][2] = {{-2.0, 16.0}, {0.0, 19.46}, {2.0, 16.0}};
+GLfloat sword_in[4][2] = {{-0.3, 0.7}, {-0.3, 15.3}, {0.3, 15.3}, {0.3, 0.7}};
+GLfloat sword_down[4][2] = {{-2.0, -6.0}, {2.0, -6.0}, {4.0, -8.0}, {-4.0, -8.0}};
+GLfloat sword_body_in[4][2] = {{0.0, -1.0}, {1.0, -2.732}, {0.0, -4.464}, {-1.0, -2.732}};
+
+GLfloat sword_color[7][3] = {
+	{139 / 255.0f, 69 / 255.0f, 19 / 255.0f},
+	{139 / 255.0f, 69 / 255.0f, 19 / 255.0f},
+	{155 / 255.0f, 155 / 255.0f, 155 / 255.0f},
+	{155 / 255.0f, 155 / 255.0f, 155 / 255.0f},
+	{0 / 255.0f, 0 / 255.0f, 0 / 255.0f},
+	{139 / 255.0f, 69 / 255.0f, 19 / 255.0f},
+	{255 / 255.0f, 0 / 255.0f, 0 / 255.0f}};
+
+GLuint VBO_sword, VAO_sword;
+
+point sword_size(5.0f, 5.0f);
+GLfloat sword_direction;
+point sword_position;
+
+const GLfloat SWORD_DIRECTION_MIN = -30 * TO_RADIAN;
+const GLfloat SWORD_DIRECTION_MAX = 30 * TO_RADIAN;
+
+unsigned int sword_speed = 10;
+
+void prepare_sword()
+{
+	GLsizeiptr buffer_size = sizeof(sword_body) + sizeof(sword_body2) + sizeof(sword_head) + sizeof(sword_head2) + sizeof(sword_in) + sizeof(sword_down) + sizeof(sword_body_in);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_sword);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_sword);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sword_body), sword_body);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(sword_body), sizeof(sword_body2), sword_body2);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(sword_body) + sizeof(sword_body2), sizeof(sword_head), sword_head);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(sword_body) + sizeof(sword_body2) + sizeof(sword_head), sizeof(sword_head2), sword_head2);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(sword_body) + sizeof(sword_body2) + sizeof(sword_head) + sizeof(sword_head2), sizeof(sword_in), sword_in);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(sword_body) + sizeof(sword_body2) + sizeof(sword_head) + sizeof(sword_head2) + sizeof(sword_in), sizeof(sword_down), sword_down);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(sword_body) + sizeof(sword_body2) + sizeof(sword_head) + sizeof(sword_head2) + sizeof(sword_in) + sizeof(sword_down), sizeof(sword_body_in), sword_body_in);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_sword);
+	glBindVertexArray(VAO_sword);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_sword);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	// Initialize sword position out of screen
+	// Actual position is randomly assigned by sword_timer
+	sword_position = point(win_width, win_height);
+}
+
+void draw_sword()
+{
+	glBindVertexArray(VAO_sword);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_BODY2]);
+	glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_HEAD]);
+	glDrawArrays(GL_TRIANGLE_FAN, 8, 4);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_HEAD2]);
+	glDrawArrays(GL_TRIANGLE_FAN, 12, 3);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_IN]);
+	glDrawArrays(GL_TRIANGLE_FAN, 15, 4);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_DOWN]);
+	glDrawArrays(GL_TRIANGLE_FAN, 19, 4);
+
+	glUniform3fv(loc_primitive_color, 1, sword_color[SWORD_BODY_IN]);
+	glDrawArrays(GL_TRIANGLE_FAN, 23, 4);
+
+	glBindVertexArray(0);
+}
+//// DESIGN SWORD END ////
+
 void display(void)
 {
 	glm::mat4 ModelMatrix;
@@ -359,16 +458,23 @@ void display(void)
 		draw_house();
 	}
 
-	// draw car object
+	// draw car2 object
 	ModelMatrix = glm::mat4(1.0f);
+	ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y + car2_updown, 0.0f));
 	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car2_size.x, car2_size.y, 1.0f));
-	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y, 0.0f));
-	ModelMatrix = glm::rotate(ModelMatrix, -current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
-	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(0, car2_updown, 0.0f));
-
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_car2();
+
+	// draw sword object
+	ModelMatrix = glm::mat4(1.0f);
+	ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(sword_position.x, sword_position.y, 0.0f));
+	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(sword_size.x, sword_size.y, 1.0f));
+	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_sword();
 
 	glFlush();
 }
@@ -388,23 +494,23 @@ void special(int key, int x, int y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		--gameplay_speed;
-		if (gameplay_speed < MIN_SPEED)
-			gameplay_speed = MIN_SPEED;
+		--car_speed;
+		if (car_speed < MIN_SPEED)
+			car_speed = MIN_SPEED;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_RIGHT:
-		++gameplay_speed;
-		if (gameplay_speed > MAX_SPEED)
-			gameplay_speed = MAX_SPEED;
+		++car_speed;
+		if (car_speed > MAX_SPEED)
+			car_speed = MAX_SPEED;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_DOWN:
-		car2_updown -= 2;
+		car2_updown -= 10;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_UP:
-		car2_updown += 2;
+		car2_updown += 10;
 		glutPostRedisplay();
 		break;
 	}
@@ -412,22 +518,44 @@ void special(int key, int x, int y)
 
 void timer(int value)
 {
-	GLfloat angle = current_angle();
+	GLfloat car_angle = current_angle();
+	std::uniform_real_distribution<> sword_x_random(-0.1 * win_width, 0.5 * win_width);
+	std::uniform_real_distribution<> sword_direction_random(-5 * TO_RADIAN, 5 * TO_RADIAN);
 
 	// Move house
 	for (size_t i = 0; i < house_positions.size(); ++i)
 	{
 		auto &house_position = house_positions[i];
 		house_sizes[i] = house_sizes[i] * point(1.0005f, 1.0005f);
-		house_position = house_position.move(angle, -1);
+		house_position = house_position.move(180 * TO_RADIAN + car_angle, car_speed);
 		if (house_position.x < -win_width * 0.6f || house_position.y < -win_height * 0.6f)
 		{
 			house_position = house_initial_positions[i] * point(win_width, win_height);
 			house_sizes[i] = house_initial_sizes[i];
 		}
 	}
+
+	// Move sword
+	sword_direction += sword_direction_random(gen);
+	if (sword_direction < SWORD_DIRECTION_MIN)
+	{
+		sword_direction = SWORD_DIRECTION_MIN;
+	}
+	else if (sword_direction > SWORD_DIRECTION_MAX)
+	{
+		sword_direction = SWORD_DIRECTION_MAX;
+	}
+	GLfloat sword_angle = 90 * TO_RADIAN + current_angle() + sword_direction;
+	sword_position = sword_position.move(sword_angle, sword_speed);
+	sword_position = sword_position.move(180 * TO_RADIAN + car_angle, car_speed);
+	if (!(-win_width * 0.6f < sword_position.x && sword_position.x < win_width * 0.6f) || !(-win_height * 0.6f < sword_position.y && sword_position.y < win_height * 0.6f))
+	{
+		GLfloat new_x = sword_x_random(gen);
+		sword_position = point(new_x, -win_height * 0.5);
+	}
+
 	glutPostRedisplay();
-	glutTimerFunc(100.0f / gameplay_speed, timer, 0);
+	glutTimerFunc(refresh_rate, timer, 0);
 }
 
 void cleanup(void)
@@ -467,10 +595,7 @@ void initialize_OpenGL(void)
 	glEnable(GL_MULTISAMPLE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	int r = background_color[0],
-		g = background_color[1],
-		b = background_color[2];
-	glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+	glClearColor(background_color[0], background_color[1], background_color[2], 1.0f);
 	ViewMatrix = glm::mat4(1.0f);
 
 	glViewport(0, 0, win_width, win_height);
@@ -484,6 +609,7 @@ void prepare_scene(void)
 	prepare_road();
 	prepare_house();
 	prepare_car2();
+	prepare_sword();
 }
 
 void initialize_renderer(void)
