@@ -927,13 +927,15 @@ GLfloat current_angle(void)
 	return std::atan((win_height * 0.5f) / (win_width));
 }
 
-#define N_MESSAGE_LINES 2
+#define N_MESSAGE_LINES 3
 int main(int argc, char *argv[])
 {
 	char program_name[64] = "Fury Road";
 	char messages[N_MESSAGE_LINES][256] = {
 		"    - Keys used: 'ESC', four arrows",
-		"    - Mouse used: L-click and move"};
+		"    - Press Up/Down arrow to move car",
+		"    - Press Left/Right arrow to control speed.",
+	};
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_MULTISAMPLE);
