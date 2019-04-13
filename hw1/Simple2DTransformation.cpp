@@ -36,6 +36,7 @@ const unsigned int MIN_SPEED = 1;
 const unsigned int MAX_SPEED = 9;
 const unsigned int INITIAL_WIDTH = 1280;
 const unsigned int INITIAL_HEIGHT = 800;
+const unsigned int refresh_rate = (unsigned int)(1000 / 30); // == 30 fps
 //////////////////////////
 
 //// PRE-DEFINED VARIABLES ////
@@ -44,10 +45,13 @@ int win_width = 0,
 ///////////////////////////////
 
 //// CUSTUM VARIABLES ////
-unsigned int car_speed = 3;							   // car moves 15 per tick
-unsigned int refresh_rate = (unsigned int)(1000 / 30); // == 30 fps
+unsigned int car_speed = 3; // car moves 15 per tick
 bool pause = false;
+int n_heart = 5;
+bool boom_flag = false;
+bool gameover_flag = false;
 
+// random number generators
 std::random_device rd;
 std::mt19937 gen(rd());
 //////////////////////////
@@ -244,7 +248,7 @@ void draw_house()
 }
 //// DESIGN HOUSE END ////
 
-//// DESIGN CAR ////
+//// DESIGN CAR2 ////
 //draw car2
 #define CAR2_BODY 0
 #define CAR2_FRONT_WINDOW 1
@@ -337,7 +341,7 @@ void draw_car2()
 
 	glBindVertexArray(0);
 }
-//// DESIGN CAR END ////
+//// DESIGN CAR2 END ////
 
 //// DESIGN SWORD ////
 const unsigned int SWORD_BODY = 0;
@@ -440,6 +444,177 @@ void draw_sword()
 }
 //// DESIGN SWORD END ////
 
+//// DESIGN CAKE ////
+const unsigned int CAKE_FIRE = 0;
+const unsigned int CAKE_CANDLE = 1;
+const unsigned int CAKE_BODY = 2;
+const unsigned int CAKE_BOTTOM = 3;
+const unsigned int CAKE_DECORATE = 4;
+
+GLfloat cake_fire[4][2] = {{-0.5, 14.0}, {-0.5, 13.0}, {0.5, 13.0}, {0.5, 14.0}};
+GLfloat cake_candle[4][2] = {{-1.0, 8.0}, {-1.0, 13.0}, {1.0, 13.0}, {1.0, 8.0}};
+GLfloat cake_body[4][2] = {{8.0, 5.0}, {-8.0, 5.0}, {-8.0, 8.0}, {8.0, 8.0}};
+GLfloat cake_bottom[4][2] = {{-10.0, 1.0}, {-10.0, 5.0}, {10.0, 5.0}, {10.0, 1.0}};
+GLfloat cake_decorate[4][2] = {{-10.0, 0.0}, {-10.0, 1.0}, {10.0, 1.0}, {10.0, 0.0}};
+
+GLfloat cake_color[5][3] = {
+	{255 / 255.0f, 0 / 255.0f, 0 / 255.0f},
+	{255 / 255.0f, 204 / 255.0f, 0 / 255.0f},
+	{255 / 255.0f, 102 / 255.0f, 255 / 255.0f},
+	{255 / 255.0f, 102 / 255.0f, 255 / 255.0f},
+	{102 / 255.0f, 51 / 255.0f, 0 / 255.0f}};
+
+GLuint VBO_cake, VAO_cake;
+
+point cake_position;
+const point cake_size(2.0f, 2.0f);
+
+void prepare_cake()
+{
+	int size = sizeof(cake_fire);
+	GLsizeiptr buffer_size = sizeof(cake_fire) * 5;
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_cake);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_cake);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, size, cake_fire);
+	glBufferSubData(GL_ARRAY_BUFFER, size, size, cake_candle);
+	glBufferSubData(GL_ARRAY_BUFFER, size * 2, size, cake_body);
+	glBufferSubData(GL_ARRAY_BUFFER, size * 3, size, cake_bottom);
+	glBufferSubData(GL_ARRAY_BUFFER, size * 4, size, cake_decorate);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_cake);
+	glBindVertexArray(VAO_cake);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_cake);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	// Initialize cake position
+	cake_position = point(0.45f * win_width, 0.45f * win_height);
+}
+
+void draw_cake()
+{
+	glBindVertexArray(VAO_cake);
+
+	glUniform3fv(loc_primitive_color, 1, cake_color[CAKE_FIRE]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glUniform3fv(loc_primitive_color, 1, cake_color[CAKE_CANDLE]);
+	glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
+
+	glUniform3fv(loc_primitive_color, 1, cake_color[CAKE_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 8, 4);
+
+	glUniform3fv(loc_primitive_color, 1, cake_color[CAKE_BOTTOM]);
+	glDrawArrays(GL_TRIANGLE_FAN, 12, 4);
+
+	glUniform3fv(loc_primitive_color, 1, cake_color[CAKE_DECORATE]);
+	glDrawArrays(GL_TRIANGLE_FAN, 16, 4);
+
+	glBindVertexArray(0);
+}
+//// DESIGN CAKE END ////
+
+//// DESIGN CAR ////
+const unsigned int CAR_BODY = 0;
+const unsigned int CAR_FRAME = 1;
+const unsigned int CAR_WINDOW = 2;
+const unsigned int CAR_LEFT_LIGHT = 3;
+const unsigned int CAR_RIGHT_LIGHT = 4;
+const unsigned int CAR_LEFT_WHEEL = 5;
+const unsigned int CAR_RIGHT_WHEEL = 6;
+
+GLfloat car_body[4][2] = {{-16.0, -8.0}, {-16.0, 0.0}, {16.0, 0.0}, {16.0, -8.0}};
+GLfloat car_frame[4][2] = {{-10.0, 0.0}, {-10.0, 10.0}, {10.0, 10.0}, {10.0, 0.0}};
+GLfloat car_window[4][2] = {{-8.0, 0.0}, {-8.0, 8.0}, {8.0, 8.0}, {8.0, 0.0}};
+GLfloat car_left_light[4][2] = {{-9.0, -6.0}, {-10.0, -5.0}, {-9.0, -4.0}, {-8.0, -5.0}};
+GLfloat car_right_light[4][2] = {{9.0, -6.0}, {8.0, -5.0}, {9.0, -4.0}, {10.0, -5.0}};
+GLfloat car_left_wheel[4][2] = {{-10.0, -12.0}, {-10.0, -8.0}, {-6.0, -8.0}, {-6.0, -12.0}};
+GLfloat car_right_wheel[4][2] = {{6.0, -12.0}, {6.0, -8.0}, {10.0, -8.0}, {10.0, -12.0}};
+
+GLfloat car_color[7][3] = {
+	{0 / 255.0f, 149 / 255.0f, 159 / 255.0f},
+	{0 / 255.0f, 149 / 255.0f, 159 / 255.0f},
+	{216 / 255.0f, 208 / 255.0f, 174 / 255.0f},
+	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f},
+	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f},
+	{21 / 255.0f, 30 / 255.0f, 26 / 255.0f},
+	{21 / 255.0f, 30 / 255.0f, 26 / 255.0f}};
+
+GLuint VBO_car, VAO_car;
+
+point car_size(10.0f, 10.0f);
+GLfloat car_angle;
+
+void prepare_car()
+{
+	GLsizeiptr buffer_size = sizeof(car_body) + sizeof(car_frame) + sizeof(car_window) + sizeof(car_left_light) + sizeof(car_right_light) + sizeof(car_left_wheel) + sizeof(car_right_wheel);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_car);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_car);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(car_body), car_body);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car_body), sizeof(car_frame), car_frame);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car_body) + sizeof(car_frame), sizeof(car_window), car_window);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car_body) + sizeof(car_frame) + sizeof(car_window), sizeof(car_left_light), car_left_light);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car_body) + sizeof(car_frame) + sizeof(car_window) + sizeof(car_left_light),
+					sizeof(car_right_light), car_right_light);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car_body) + sizeof(car_frame) + sizeof(car_window) + sizeof(car_left_light) + sizeof(car_right_light), sizeof(car_left_wheel), car_left_wheel);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(car_body) + sizeof(car_frame) + sizeof(car_window) + sizeof(car_left_light) + sizeof(car_right_light) + sizeof(car_left_wheel), sizeof(car_right_wheel), car_right_wheel);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_car);
+	glBindVertexArray(VAO_car);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_car);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_car()
+{
+	glBindVertexArray(VAO_car);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_FRAME]);
+	glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_WINDOW]);
+	glDrawArrays(GL_TRIANGLE_FAN, 8, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_LEFT_LIGHT]);
+	glDrawArrays(GL_TRIANGLE_FAN, 12, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_RIGHT_LIGHT]);
+	glDrawArrays(GL_TRIANGLE_FAN, 16, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_LEFT_WHEEL]);
+	glDrawArrays(GL_TRIANGLE_FAN, 20, 4);
+
+	glUniform3fv(loc_primitive_color, 1, car_color[CAR_RIGHT_WHEEL]);
+	glDrawArrays(GL_TRIANGLE_FAN, 24, 4);
+
+	glBindVertexArray(0);
+}
+//// DESIGN CAR END ////
+
 void display(void)
 {
 	glm::mat4 ModelMatrix;
@@ -471,6 +646,10 @@ void display(void)
 	ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
 	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y, 0.0f));
 	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car2_size.x, car2_size.y, 1.0f));
+	if (boom_flag || gameover_flag)
+	{
+		ModelMatrix = glm::rotate(ModelMatrix, -1.5f * current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+	}
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_car2();
@@ -484,16 +663,25 @@ void display(void)
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_sword();
 
-	if (car2_position.distance(sword_position) < 100.0f)
+	// draw cake objects
+	for (int i = 0; i < n_heart; ++i)
 	{
 		ModelMatrix = glm::mat4(1.0f);
-		ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
-		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y, 0.0f));
-		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car2_size.x, car2_size.y, 1.0f));
-		ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(cake_position.x - i * 16 * 1.5 * cake_size.x, cake_position.y, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(cake_size.x, cake_size.y, 1.0f));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-		draw_car2();
+		draw_cake();
+	}
+
+	if (gameover_flag)
+	{
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::rotate(ModelMatrix, car_angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car_size.x, car_size.y, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_car();
 	}
 
 	glFlush();
@@ -507,25 +695,36 @@ void keyboard(unsigned char key, int x, int y)
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
 	case 'p':
-		pause = !pause;
+		if (!gameover_flag)
+		{
+			pause = !pause;
+		}
 		break;
 	}
 }
 
 void special(int key, int x, int y)
 {
+	if (gameover_flag)
+	{
+		return;
+	}
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
 		--car_speed;
 		if (car_speed < MIN_SPEED)
+		{
 			car_speed = MIN_SPEED;
+		}
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_RIGHT:
 		++car_speed;
 		if (car_speed > MAX_SPEED)
+		{
 			car_speed = MAX_SPEED;
+		}
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_DOWN:
@@ -541,20 +740,61 @@ void special(int key, int x, int y)
 
 void timer(int value)
 {
+	// random number generators form sword movement
+	std::uniform_real_distribution<> sword_x_random(-0.1 * win_width, 0.1 * win_width);
+	std::uniform_real_distribution<> sword_direction_random(-30 * TO_RADIAN, 30 * TO_RADIAN);
+
+	// make gameover scene
+	if (n_heart == 0)
+	{
+		gameover_flag = true;
+		car_speed = 0;
+		car_size = car_size * point(1.01f, 1.01f);
+		car_angle = car_angle + 10 * TO_RADIAN;
+		if (car_angle > 360 * TO_RADIAN)
+		{
+			car_angle -= 360 * TO_RADIAN;
+			// stop rotating if gameover scene is big enough
+			if (car_size.x >= 100)
+			{
+				car_angle = 0;
+				pause = true;
+				return;
+			}
+		}
+	}
+
+	// check for pause
 	if (pause)
 	{
 		glutTimerFunc(refresh_rate, timer, 0);
 		return;
 	}
-	std::uniform_real_distribution<> sword_x_random(-0.1 * win_width, 0.1 * win_width);
-	std::uniform_real_distribution<> sword_direction_random(-30 * TO_RADIAN, 30 * TO_RADIAN);
+
+	// check for boom
+	if (car2_position.distance(sword_position) < 100.0f)
+	{
+		if (!boom_flag)
+		{
+			boom_flag = true;
+			n_heart--;
+			if (n_heart < 0)
+			{
+				n_heart = 0;
+			}
+		}
+	}
+	else
+	{
+		boom_flag = false;
+	}
 
 	// Move house
 	for (size_t i = 0; i < n_house; ++i)
 	{
 		house_sizes[i] = house_sizes[i] * point(1.0005f, 1.0005f);
 		house_positions[i].x -= car_speed;
-		if (house_positions[i].x < -0.6f)
+		if (house_positions[i].x < -0.6f * win_width)
 		{
 			house_positions[i] = house_initial_positions[i] * point(win_width, win_height);
 			house_sizes[i] = house_initial_sizes[i];
@@ -636,6 +876,8 @@ void prepare_scene(void)
 	prepare_house();
 	prepare_car2();
 	prepare_sword();
+	prepare_cake();
+	prepare_car();
 }
 
 void initialize_renderer(void)
