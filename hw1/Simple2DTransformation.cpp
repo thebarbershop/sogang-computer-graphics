@@ -744,10 +744,9 @@ void timer(int value)
 	std::uniform_real_distribution<> sword_x_random(-0.1 * win_width, 0.1 * win_width);
 	std::uniform_real_distribution<> sword_direction_random(-30 * TO_RADIAN, 30 * TO_RADIAN);
 
-	// make gameover scene
-	if (n_heart == 0)
+	// check for gameover
+	if (gameover_flag)
 	{
-		gameover_flag = true;
 		car_speed = 0;
 		car_size = car_size * point(1.01f, 1.01f);
 		car_angle = car_angle + 10 * TO_RADIAN;
@@ -758,6 +757,7 @@ void timer(int value)
 			if (car_size.x >= 100)
 			{
 				car_angle = 0;
+				glutPostRedisplay();
 				pause = true;
 				return;
 			}
@@ -778,9 +778,9 @@ void timer(int value)
 		{
 			boom_flag = true;
 			n_heart--;
-			if (n_heart < 0)
+			if (n_heart == 0)
 			{
-				n_heart = 0;
+				gameover_flag = true;
 			}
 		}
 	}
@@ -927,12 +927,13 @@ GLfloat current_angle(void)
 	return std::atan((win_height * 0.5f) / (win_width));
 }
 
-#define N_MESSAGE_LINES 3
+#define N_MESSAGE_LINES 4
 int main(int argc, char *argv[])
 {
 	char program_name[64] = "Fury Road";
 	char messages[N_MESSAGE_LINES][256] = {
-		"    - Keys used: 'ESC', four arrows",
+		"    - Keys used: 'ESC', 'p', four arrows",
+		"    - Press 'p' to pause.",
 		"    - Press Up/Down arrow to move car",
 		"    - Press Left/Right arrow to control speed.",
 	};
