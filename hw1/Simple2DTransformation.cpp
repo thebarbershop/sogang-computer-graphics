@@ -3,6 +3,10 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
+#include <cmath>
+#include <iostream>
+#include <vector>
+
 #include "Shaders/LoadShaders.h"
 GLuint h_ShaderProgram;									  // handle to shader program
 GLint loc_ModelViewProjectionMatrix, loc_primitive_color; // indices of uniform variables
@@ -31,33 +35,75 @@ int health = 5;							 // gameover when health == 0
 
 //////////////////////////
 
-int win_width = 0, win_height = 0;
+//// CUSTUM DATA STRUCTURE ////
+
+struct point
+{
+	GLfloat x, y;
+	point(GLfloat x, GLfloat y) : x(x), y(y) {}
+	point() { point(0.0f, 0.0f); }
+	point move(GLfloat angle, GLfloat length)
+	{
+		GLfloat x1 = x + length * std::cos(angle);
+		GLfloat y1 = y + length * std::sin(angle);
+		return point(x1, y1);
+	}
+};
+
+///////////////////////////////
+
+int win_width = 0,
+	win_height = 0;
 float centerx = 0.0f, centery = 0.0f, rotate_angle = 0.0f;
 
 //// DESIGN ROAD ////
 
-GLfloat road_color[3] = {112 / 255.0f, 128 / 255.0f, 144 / 255.0f};
+const unsigned int ROAD_MAIN = 0;
+const unsigned int ROAD_LINE_LEFT = 1;
+const unsigned int ROAD_LINE_RIGHT = 2;
+
+GLfloat road_color[3][3] = {
+	{0x70 / 255.0f, 0x80 / 255.0f, 0x90 / 255.0f},
+	{0xFF / 255.0f, 0xFA / 255.0f, 0xFA / 255.0f},
+	{0xFF / 255.0f, 0xFA / 255.0f, 0xFA / 255.0f},
+};
 
 GLuint VBO_road, VAO_road;
 
 void prepare_road()
 {
-	GLfloat road_shape[6][2] = {
-		{-win_width / 2.0f, 0.0},
+	GLfloat road_main_shape[6][2] = {
+		{-win_width / 2.0f, 0.0f},
 		{win_width * (1.0f / 3), win_height / 2.0f},
 		{win_width / 2.0f, win_height / 2.0f},
-		{win_width / 2.0f, 0.0},
+		{win_width / 2.0f, 0.0f},
 		{-win_width * (1.0f / 3), -win_height / 2.0f},
-		{-win_width / 2.0f, -win_height / 2.0f}};
+		{-win_width / 2.0f, -win_height / 2.0f},
+	};
+	GLfloat road_line_left_shape[4][2] = {
+		{-win_width / 2.0f, 0.0f},
+		{win_width * (1.0f / 3), win_height / 2.0f},
+		{win_width * (1.0f / 3) + win_width * (1.0f / 20), win_height / 2.0f},
+		{-win_width / 2.0f, -win_height * (1.0f / 20)},
+	};
+	GLfloat road_line_right_shape[4][2] = {
+		{win_width / 2.0f, 0.0f},
+		{-win_width * (1.0f / 3), -win_height / 2.0f},
+		{-win_width * (1.0f / 3) - win_width * (1.0f / 20), -win_height / 2.0f},
+		{win_width / 2.0f, win_height * (1.0f / 20)},
 
-	GLsizeiptr buffer_size = sizeof(road_shape);
+	};
+
+	GLsizeiptr buffer_size = sizeof(road_main_shape) + sizeof(road_line_left_shape) + sizeof(road_line_right_shape);
 
 	glGenBuffers(1, &VBO_road);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO_road);
-	glBufferData(GL_ARRAY_BUFFER, buffer_size, road_shape, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW);
 
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(road_shape), road_shape);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(road_main_shape), road_main_shape);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(road_main_shape), sizeof(road_line_left_shape), road_line_left_shape);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(road_main_shape) + sizeof(road_line_left_shape), sizeof(road_line_right_shape), road_line_right_shape);
 
 	glGenVertexArrays(1, &VAO_road);
 	glBindVertexArray(VAO_road);
@@ -74,65 +120,65 @@ void draw_road()
 {
 	glBindVertexArray(VAO_road);
 
-	glUniform3fv(loc_primitive_color, 1, road_color);
+	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_MAIN]);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+
+	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_LINE_LEFT]);
+	glDrawArrays(GL_TRIANGLE_FAN, 6, 4);
+
+	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_LINE_RIGHT]);
+	glDrawArrays(GL_TRIANGLE_FAN, 10, 4);
 
 	glBindVertexArray(0);
 }
 //// DESIGN ROAD END ////
 
-//// DESIGN AIRPLANE ////
-const unsigned int AIRPLANE_BIG_WING = 0;
-const unsigned int AIRPLANE_SMALL_WING = 1;
-const unsigned int AIRPLANE_BODY = 2;
-const unsigned int AIRPLANE_BACK = 3;
-const unsigned int AIRPLANE_SIDEWINDER1 = 4;
-const unsigned int AIRPLANE_SIDEWINDER2 = 5;
-const unsigned int AIRPLANE_CENTER = 6;
+//// DESIGN HOUSE ////
+#define HOUSE_ROOF 0
+#define HOUSE_BODY 1
+#define HOUSE_CHIMNEY 2
+#define HOUSE_DOOR 3
+#define HOUSE_WINDOW 4
 
-GLfloat big_wing[6][2] = {{0.0, 0.0}, {-20.0, 15.0}, {-20.0, 20.0}, {0.0, 23.0}, {20.0, 20.0}, {20.0, 15.0}};
-GLfloat small_wing[6][2] = {{0.0, -18.0}, {-11.0, -12.0}, {-12.0, -7.0}, {0.0, -10.0}, {12.0, -7.0}, {11.0, -12.0}};
-GLfloat body[5][2] = {{0.0, -25.0}, {-6.0, 0.0}, {-6.0, 22.0}, {6.0, 22.0}, {6.0, 0.0}};
-GLfloat back[5][2] = {{0.0, 25.0}, {-7.0, 24.0}, {-7.0, 21.0}, {7.0, 21.0}, {7.0, 24.0}};
-GLfloat sidewinder1[5][2] = {{-20.0, 10.0}, {-18.0, 3.0}, {-16.0, 10.0}, {-18.0, 20.0}, {-20.0, 20.0}};
-GLfloat sidewinder2[5][2] = {{20.0, 10.0}, {18.0, 3.0}, {16.0, 10.0}, {18.0, 20.0}, {20.0, 20.0}};
-GLfloat center[1][2] = {{0.0, 0.0}};
-GLfloat airplane_color[7][3] = {
-	{150 / 255.0f, 129 / 255.0f, 183 / 255.0f}, // big_wing
-	{245 / 255.0f, 211 / 255.0f, 0 / 255.0f},   // small_wing
-	{111 / 255.0f, 85 / 255.0f, 157 / 255.0f},  // body
-	{150 / 255.0f, 129 / 255.0f, 183 / 255.0f}, // back
-	{245 / 255.0f, 211 / 255.0f, 0 / 255.0f},   // sidewinder1
-	{245 / 255.0f, 211 / 255.0f, 0 / 255.0f},   // sidewinder2
-	{255 / 255.0f, 0 / 255.0f, 0 / 255.0f}		// center
+GLfloat roof[3][2] = {{-12.0, 0.0}, {0.0, 12.0}, {12.0, 0.0}};
+GLfloat house_body[4][2] = {{-12.0, -14.0}, {-12.0, 0.0}, {12.0, 0.0}, {12.0, -14.0}};
+GLfloat chimney[4][2] = {{6.0, 6.0}, {6.0, 14.0}, {10.0, 14.0}, {10.0, 2.0}};
+GLfloat door[4][2] = {{-8.0, -14.0}, {-8.0, -8.0}, {-4.0, -8.0}, {-4.0, -14.0}};
+GLfloat window[4][2] = {{4.0, -6.0}, {4.0, -2.0}, {8.0, -2.0}, {8.0, -6.0}};
+
+GLfloat house_color[5][3] = {
+	{200 / 255.0f, 39 / 255.0f, 42 / 255.0f},
+	{235 / 255.0f, 225 / 255.0f, 196 / 255.0f},
+	{255 / 255.0f, 0 / 255.0f, 0 / 255.0f},
+	{233 / 255.0f, 113 / 255.0f, 23 / 255.0f},
+	{44 / 255.0f, 180 / 255.0f, 49 / 255.0f},
 };
 
-GLuint VBO_airplane, VAO_airplane;
+std::vector<point> house_positions;
 
-void prepare_airplane()
+GLuint VBO_house, VAO_house;
+void prepare_house()
 {
-	GLsizeiptr buffer_size = sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back) + sizeof(sidewinder1) + sizeof(sidewinder2) + sizeof(center);
+	GLsizeiptr buffer_size = sizeof(roof) + sizeof(house_body) + sizeof(chimney) + sizeof(door) + sizeof(window);
 
 	// Initialize vertex buffer object.
-	glGenBuffers(1, &VBO_airplane);
+	glGenBuffers(1, &VBO_house);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_airplane);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_house);
 	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
 
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(big_wing), big_wing);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing), sizeof(small_wing), small_wing);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing), sizeof(body), body);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body), sizeof(back), back);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back),
-					sizeof(sidewinder1), sidewinder1);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back) + sizeof(sidewinder1), sizeof(sidewinder2), sidewinder2);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back) + sizeof(sidewinder1) + sizeof(sidewinder2), sizeof(center), center);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(roof), roof);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(roof), sizeof(house_body), house_body);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(roof) + sizeof(house_body), sizeof(chimney), chimney);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(roof) + sizeof(house_body) + sizeof(chimney), sizeof(door), door);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(roof) + sizeof(house_body) + sizeof(chimney) + sizeof(door),
+					sizeof(window), window);
 
 	// Initialize vertex array object.
-	glGenVertexArrays(1, &VAO_airplane);
-	glBindVertexArray(VAO_airplane);
+	glGenVertexArrays(1, &VAO_house);
+	glBindVertexArray(VAO_house);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_airplane);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_house);
 	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
 
 	glEnableVertexAttribArray(0);
@@ -140,40 +186,31 @@ void prepare_airplane()
 	glBindVertexArray(0);
 }
 
-void draw_airplane()
-{ // Draw airplane in its MC.
-	glBindVertexArray(VAO_airplane);
+void draw_house()
+{
+	glBindVertexArray(VAO_house);
 
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_BIG_WING]);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+	glUniform3fv(loc_primitive_color, 1, house_color[HOUSE_ROOF]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 3);
 
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_SMALL_WING]);
-	glDrawArrays(GL_TRIANGLE_FAN, 6, 6);
+	glUniform3fv(loc_primitive_color, 1, house_color[HOUSE_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 3, 4);
 
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_BODY]);
-	glDrawArrays(GL_TRIANGLE_FAN, 12, 5);
+	glUniform3fv(loc_primitive_color, 1, house_color[HOUSE_CHIMNEY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 7, 4);
 
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_BACK]);
-	glDrawArrays(GL_TRIANGLE_FAN, 17, 5);
+	glUniform3fv(loc_primitive_color, 1, house_color[HOUSE_DOOR]);
+	glDrawArrays(GL_TRIANGLE_FAN, 11, 4);
 
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_SIDEWINDER1]);
-	glDrawArrays(GL_TRIANGLE_FAN, 22, 5);
+	glUniform3fv(loc_primitive_color, 1, house_color[HOUSE_WINDOW]);
+	glDrawArrays(GL_TRIANGLE_FAN, 15, 4);
 
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_SIDEWINDER2]);
-	glDrawArrays(GL_TRIANGLE_FAN, 27, 5);
-
-	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_CENTER]);
-	glPointSize(5.0);
-	glDrawArrays(GL_POINTS, 32, 1);
-	glPointSize(1.0);
 	glBindVertexArray(0);
 }
-//// DESIGN AIRPLANE END ////
+//// DESIGN HOUSE END ////
 
 void display(void)
 {
-	int i;
-	float x, r, s, delx, delr, dels;
 	glm::mat4 ModelMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -183,7 +220,17 @@ void display(void)
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_road();
 
-	draw_airplane();
+	ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, win_height * 0.4f, 0.0f));
+	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 1.0f));
+	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_house();
+
+	ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(win_width * 0.3f, -win_height * 0.25f, 0.0f));
+	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 1.0f));
+	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_house();
 
 	glFlush();
 }
@@ -292,8 +339,8 @@ void cleanup(void)
 	glDeleteVertexArrays(1, &VAO_road);
 	glDeleteBuffers(1, &VBO_road);
 
-	glDeleteVertexArrays(1, &VAO_airplane);
-	glDeleteBuffers(1, &VBO_airplane);
+	glDeleteVertexArrays(1, &VAO_house);
+	glDeleteBuffers(1, &VBO_house);
 }
 
 void register_callbacks(void)
@@ -337,7 +384,7 @@ void initialize_OpenGL(void)
 void prepare_scene(void)
 {
 	prepare_road();
-	prepare_airplane();
+	prepare_house();
 }
 
 void initialize_renderer(void)
