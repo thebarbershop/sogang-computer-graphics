@@ -25,14 +25,24 @@ glm::mat4 ViewMatrix, ProjectionMatrix, ViewProjectionMatrix;
 
 //// Function headers ////
 void prepare_scene(void);
+void cleanup(void);
+GLfloat current_angle(void);
 //////////////////////////
 
 //// CUSTUM CONSTANTS ////
 
-int background_color[] = {173, 255, 47}; // R,G,B value of background color (0-255)
-int gameplay_speed = 10;				 // speed of gameplay
-int health = 5;							 // gameover when health == 0
+const int background_color[] = {173, 255, 47}; // R,G,B value of background color (0-255)
+const GLfloat PI = 3.14159265358979323846;
+const unsigned int MIN_SPEED = 10;
+const unsigned int MAX_SPEED = 20;
+const unsigned int INITIAL_WIDTH = 1280;
+const unsigned int INITIAL_HEIGHT = 800;
 
+//////////////////////////
+
+//// CUSTUM VARIABLES ////
+unsigned int gameplay_speed = 15; // speed of gameplay
+int health = 5;					  // gameover when health == 0
 //////////////////////////
 
 //// CUSTUM DATA STRUCTURE ////
@@ -42,10 +52,16 @@ struct point
 	GLfloat x, y;
 	point(GLfloat x, GLfloat y) : x(x), y(y) {}
 	point() { point(0.0f, 0.0f); }
-	point move(GLfloat angle, GLfloat length)
+	point move(GLfloat angle, GLfloat length) const
 	{
 		GLfloat x1 = x + length * std::cos(angle);
 		GLfloat y1 = y + length * std::sin(angle);
+		return point(x1, y1);
+	}
+	point operator*(const point &rhs) const
+	{
+		GLfloat x1 = x * rhs.x;
+		GLfloat y1 = y * rhs.y;
 		return point(x1, y1);
 	}
 };
@@ -73,24 +89,24 @@ GLuint VBO_road, VAO_road;
 void prepare_road()
 {
 	GLfloat road_main_shape[6][2] = {
-		{-win_width / 2.0f, 0.0f},
-		{win_width * (1.0f / 3), win_height / 2.0f},
-		{win_width / 2.0f, win_height / 2.0f},
-		{win_width / 2.0f, 0.0f},
-		{-win_width * (1.0f / 3), -win_height / 2.0f},
-		{-win_width / 2.0f, -win_height / 2.0f},
+		{-win_width * 0.5f, 0.0f},
+		{win_width * (1.0f / 3), win_height * 0.5f},
+		{win_width * 0.5f, win_height * 0.5f},
+		{win_width * 0.5f, 0.0f},
+		{-win_width * (1.0f / 3), -win_height * 0.5f},
+		{-win_width * 0.5f, -win_height * 0.5f},
 	};
 	GLfloat road_line_left_shape[4][2] = {
-		{-win_width / 2.0f, 0.0f},
-		{win_width * (1.0f / 3), win_height / 2.0f},
-		{win_width * (1.0f / 3) + win_width * (1.0f / 20), win_height / 2.0f},
-		{-win_width / 2.0f, -win_height * (1.0f / 20)},
+		{-win_width * 0.5f, 0.0f},
+		{win_width * (1.0f / 3), win_height * 0.5f},
+		{win_width * (1.0f / 3) + win_width * (1.0f / 20), win_height * 0.5f},
+		{-win_width * 0.5f, -win_height * (1.0f / 20)},
 	};
 	GLfloat road_line_right_shape[4][2] = {
-		{win_width / 2.0f, 0.0f},
-		{-win_width * (1.0f / 3), -win_height / 2.0f},
-		{-win_width * (1.0f / 3) - win_width * (1.0f / 20), -win_height / 2.0f},
-		{win_width / 2.0f, win_height * (1.0f / 20)},
+		{win_width * 0.5f, 0.0f},
+		{-win_width * (1.0f / 3), -win_height * 0.5f},
+		{-win_width * (1.0f / 3) - win_width * (1.0f / 20), -win_height * 0.5f},
+		{win_width * 0.5f, win_height * (1.0f / 20)},
 
 	};
 
@@ -155,6 +171,11 @@ GLfloat house_color[5][3] = {
 };
 
 std::vector<point> house_positions;
+const std::vector<point> house_initial_positions = {
+	point(1.0f / 3, 0.6f),
+	point(0.5f, -0.1f),
+}; // initial positions, propotional to win_width and win_height
+const std::vector<GLfloat> house_initial_displacement = {0, INITIAL_HEIGHT *(-0.5)};
 
 GLuint VBO_house, VAO_house;
 void prepare_house()
@@ -184,6 +205,12 @@ void prepare_house()
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+
+	// Initialize house position
+	for (size_t i = 0; i < house_initial_positions.size(); ++i)
+	{
+		house_positions.push_back(house_initial_positions[i] * point(win_width, win_height));
+	}
 }
 
 void draw_house()
@@ -220,17 +247,14 @@ void display(void)
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_road();
 
-	ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, win_height * 0.4f, 0.0f));
-	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_house();
-
-	ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(win_width * 0.3f, -win_height * 0.25f, 0.0f));
-	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_house();
+	for (auto &house_position : house_positions)
+	{
+		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(house_position.x, house_position.y, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_house();
+	}
 
 	glFlush();
 }
@@ -251,11 +275,15 @@ void special(int key, int x, int y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		centerx -= SENSITIVITY;
+		--gameplay_speed;
+		if (gameplay_speed < MIN_SPEED)
+			gameplay_speed = MIN_SPEED;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_RIGHT:
-		centerx += SENSITIVITY;
+		++gameplay_speed;
+		if (gameplay_speed > MAX_SPEED)
+			gameplay_speed = MAX_SPEED;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_DOWN:
@@ -285,7 +313,7 @@ void motion(int x, int y)
 	float dx, dy;
 	if (leftbuttonpressed)
 	{
-		centerx = x - win_width / 2.0f, centery = (win_height - y) - win_height / 2.0f;
+		centerx = x - win_width * 0.5f, centery = (win_height - y) - win_height * 0.5f;
 		if (delay == 8)
 		{
 			dx = centerx - tmpx;
@@ -323,15 +351,27 @@ void reshape(int width, int height)
 								  -win_height / 2.0, win_height / 2.0, -1000.0, 1000.0);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 
-	prepare_scene();
+	prepare_road();
 
 	glutPostRedisplay();
 }
 
 void timer(int value)
 {
+	GLfloat angle = current_angle();
+
+	// Move house
+	for (size_t i = 0; i < house_positions.size(); ++i)
+	{
+		auto &house_position = house_positions[i];
+		house_position = house_position.move(angle, -1);
+		if (house_position.x < -win_width * 0.6f || house_position.y < -win_height * 0.6f)
+		{
+			house_position = house_initial_positions[i] * point(win_width, win_height);
+		}
+	}
 	glutPostRedisplay();
-	glutTimerFunc(gameplay_speed, timer, 0);
+	glutTimerFunc(100.0f / gameplay_speed, timer, 0);
 }
 
 void cleanup(void)
@@ -429,6 +469,11 @@ void greetings(char *program_name, char messages[][256], int n_message_lines)
 	initialize_glew();
 }
 
+GLfloat current_angle(void)
+{
+	return std::atan((win_height * 0.5f) / (win_width * (5.0f / 6)));
+}
+
 #define N_MESSAGE_LINES 2
 int main(int argc, char *argv[])
 {
@@ -439,8 +484,8 @@ int main(int argc, char *argv[])
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_MULTISAMPLE);
-	win_width = int(800 * 1.44);
-	win_height = int(800);
+	win_width = INITIAL_WIDTH;
+	win_height = INITIAL_HEIGHT;
 	glutInitWindowSize(win_width, win_height);
 	glutInitContextVersion(3, 3);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
