@@ -38,9 +38,15 @@ const unsigned int INITIAL_WIDTH = 1280;
 const unsigned int INITIAL_HEIGHT = 800;
 //////////////////////////
 
+//// PRE-DEFINED VARIABLES ////
+int win_width = 0,
+	win_height = 0;
+///////////////////////////////
+
 //// CUSTUM VARIABLES ////
-unsigned int car_speed = 3;		// car moves 15 per tick
-unsigned int refresh_rate = 30; // redraw screen every 30 ms.
+unsigned int car_speed = 3;							   // car moves 15 per tick
+unsigned int refresh_rate = (unsigned int)(1000 / 30); // == 30 fps
+bool pause = false;
 
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -52,7 +58,7 @@ struct point
 	GLfloat x, y;
 	point(GLfloat x, GLfloat y) : x(x), y(y) {}
 	point() { point(0.0f, 0.0f); }
-	point move(GLfloat angle, GLfloat displacement) const
+	point move(const GLfloat angle, const GLfloat displacement) const
 	{
 		// move the point by given angle and displacement
 		GLfloat x1 = x + displacement * std::cos(angle);
@@ -66,37 +72,36 @@ struct point
 		GLfloat y1 = y * rhs.y;
 		return point(x1, y1);
 	}
+
+	GLfloat distance(const point &rhs) const
+	{
+		return std::sqrt((x - rhs.x) * (x - rhs.x) + (y - rhs.y) * (y - rhs.y));
+	}
 };
 ///////////////////////////////
 
-int win_width = 0,
-	win_height = 0;
-
 //// DESIGN ROAD ////
-
 const unsigned int ROAD_MAIN = 0;
-const unsigned int ROAD_LINE_LEFT = 1;
-const unsigned int ROAD_LINE_RIGHT = 2;
+const unsigned int ROAD_LINE_TOP = 1;
+const unsigned int ROAD_LINE_BOTTOM = 2;
 
-GLfloat road_main_shape[6][2] = {
-	{-0.5f, 0.0f},
-	{(1.0f / 3), 0.5f},
-	{0.5f, 0.5f},
-	{0.5f, 0.0f},
-	{-(1.0f / 3), -0.5f},
-	{-0.5f, -0.5f},
+GLfloat road_main_shape[4][2] = {
+	{-1.0f, 0.3f},
+	{1.0f, 0.3f},
+	{1.0f, -0.3f},
+	{-1.0f, -0.3f},
 };
-GLfloat road_line_left_shape[4][2] = {
-	{-0.5f, 0.0f},
-	{1.0f / 3, 0.5f},
-	{23.0f / 60, 0.5f},
-	{-0.5f, -1.0f / 20},
+GLfloat road_line_top_shape[4][2] = {
+	{-1.0f, 0.3f},
+	{1.0f, 0.3f},
+	{1.0f, 0.25f},
+	{-1.0f, 0.25f},
 };
-GLfloat road_line_right_shape[4][2] = {
-	{0.5f, 0.0f},
-	{-1.0f / 3, -0.5f},
-	{-23.0f / 60, -0.5f},
-	{0.5f, 1.0f / 20},
+GLfloat road_line_bottom_shape[4][2] = {
+	{-1.0f, -0.3f},
+	{1.0f, -0.3f},
+	{1.0f, -0.25f},
+	{-1.0f, -0.25f},
 };
 
 GLfloat road_color[3][3] = {
@@ -109,7 +114,7 @@ GLuint VBO_road, VAO_road;
 
 void prepare_road()
 {
-	GLsizeiptr buffer_size = sizeof(road_main_shape) + sizeof(road_line_left_shape) + sizeof(road_line_right_shape);
+	GLsizeiptr buffer_size = sizeof(road_main_shape) + sizeof(road_line_top_shape) + sizeof(road_line_bottom_shape);
 
 	glGenBuffers(1, &VBO_road);
 
@@ -117,8 +122,8 @@ void prepare_road()
 	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW);
 
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(road_main_shape), road_main_shape);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(road_main_shape), sizeof(road_line_left_shape), road_line_left_shape);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(road_main_shape) + sizeof(road_line_left_shape), sizeof(road_line_right_shape), road_line_right_shape);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(road_main_shape), sizeof(road_line_top_shape), road_line_top_shape);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(road_main_shape) + sizeof(road_line_top_shape), sizeof(road_line_bottom_shape), road_line_bottom_shape);
 
 	glGenVertexArrays(1, &VAO_road);
 	glBindVertexArray(VAO_road);
@@ -136,13 +141,13 @@ void draw_road()
 	glBindVertexArray(VAO_road);
 
 	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_MAIN]);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_LINE_LEFT]);
-	glDrawArrays(GL_TRIANGLE_FAN, 6, 4);
+	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_LINE_TOP]);
+	glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
 
-	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_LINE_RIGHT]);
-	glDrawArrays(GL_TRIANGLE_FAN, 10, 4);
+	glUniform3fv(loc_primitive_color, 1, road_color[ROAD_LINE_BOTTOM]);
+	glDrawArrays(GL_TRIANGLE_FAN, 4 + 4, 4);
 
 	glBindVertexArray(0);
 }
@@ -172,10 +177,9 @@ GLfloat house_color[5][3] = {
 const size_t n_house = 2;
 std::vector<point> house_positions;
 const std::vector<point> house_initial_positions = {
-	point(1.0f / 3, 0.65f),
-	point(0.5f, -0.1f),
+	point(0.5f, 0.38f),
+	point(0.4f, -0.4f),
 }; // initial positions, propotional to win_width and win_height
-const std::vector<GLfloat> house_initial_displacement = {0, INITIAL_HEIGHT *(-0.5)};
 
 std::vector<point> house_sizes;
 const std::vector<point> house_initial_sizes = {point(3.0f, 3.0f), point(3.0f, 3.0f)};
@@ -270,7 +274,6 @@ GLfloat car2_color[7][3] = {
 point car2_position;
 GLfloat car2_displacement = -.4f;
 point car2_size = point(-4.0f, 4.0f);
-int car2_updown = 0;
 
 GLuint VBO_car2, VAO_car2;
 void prepare_car2()
@@ -368,8 +371,8 @@ point sword_size(5.0f, 5.0f);
 GLfloat sword_direction;
 point sword_position;
 
-const GLfloat SWORD_DIRECTION_MIN = -30 * TO_RADIAN;
-const GLfloat SWORD_DIRECTION_MAX = 30 * TO_RADIAN;
+const GLfloat SWORD_DIRECTION_MIN = 30 * TO_RADIAN;
+const GLfloat SWORD_DIRECTION_MAX = 150 * TO_RADIAN;
 
 unsigned int sword_speed = 10;
 
@@ -405,6 +408,7 @@ void prepare_sword()
 	// Initialize sword position out of screen
 	// Actual position is randomly assigned by sword_timer
 	sword_position = point(win_width, win_height);
+	sword_direction = 90 * TO_RADIAN;
 }
 
 void draw_sword()
@@ -443,7 +447,9 @@ void display(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// draw road object
-	ModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(win_width, win_height, 1.0f));
+	ModelMatrix = glm::mat4(1.0f);
+	ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(win_width, win_height, 1.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_road();
@@ -451,7 +457,9 @@ void display(void)
 	// draw house objects
 	for (size_t i = 0; i < n_house; i++)
 	{
-		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(house_positions[i].x, house_positions[i].y, 0.0f));
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(house_positions[i].x, house_positions[i].y, 0.0f));
 		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(house_sizes[i].x, house_sizes[i].y, 1.0f));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -461,7 +469,7 @@ void display(void)
 	// draw car2 object
 	ModelMatrix = glm::mat4(1.0f);
 	ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
-	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y + car2_updown, 0.0f));
+	ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y, 0.0f));
 	ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car2_size.x, car2_size.y, 1.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -476,6 +484,18 @@ void display(void)
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_sword();
 
+	if (car2_position.distance(sword_position) < 100.0f)
+	{
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(car2_position.x, car2_position.y, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(car2_size.x, car2_size.y, 1.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, current_angle(), glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_car2();
+	}
+
 	glFlush();
 }
 
@@ -485,6 +505,9 @@ void keyboard(unsigned char key, int x, int y)
 	{
 	case 27:				 // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
+		break;
+	case 'p':
+		pause = !pause;
 		break;
 	}
 }
@@ -506,11 +529,11 @@ void special(int key, int x, int y)
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_DOWN:
-		car2_updown -= 10;
+		car2_position.y -= 0.01f * win_height;
 		glutPostRedisplay();
 		break;
 	case GLUT_KEY_UP:
-		car2_updown += 10;
+		car2_position.y += 0.01f * win_height;
 		glutPostRedisplay();
 		break;
 	}
@@ -518,25 +541,29 @@ void special(int key, int x, int y)
 
 void timer(int value)
 {
-	GLfloat car_angle = current_angle();
-	std::uniform_real_distribution<> sword_x_random(-0.1 * win_width, 0.5 * win_width);
-	std::uniform_real_distribution<> sword_direction_random(-5 * TO_RADIAN, 5 * TO_RADIAN);
+	if (pause)
+	{
+		glutTimerFunc(refresh_rate, timer, 0);
+		return;
+	}
+	std::uniform_real_distribution<> sword_x_random(-0.1 * win_width, 0.1 * win_width);
+	std::uniform_real_distribution<> sword_direction_random(-30 * TO_RADIAN, 30 * TO_RADIAN);
 
 	// Move house
-	for (size_t i = 0; i < house_positions.size(); ++i)
+	for (size_t i = 0; i < n_house; ++i)
 	{
-		auto &house_position = house_positions[i];
 		house_sizes[i] = house_sizes[i] * point(1.0005f, 1.0005f);
-		house_position = house_position.move(180 * TO_RADIAN + car_angle, car_speed);
-		if (house_position.x < -win_width * 0.6f || house_position.y < -win_height * 0.6f)
+		house_positions[i].x -= car_speed;
+		if (house_positions[i].x < -0.6f)
 		{
-			house_position = house_initial_positions[i] * point(win_width, win_height);
+			house_positions[i] = house_initial_positions[i] * point(win_width, win_height);
 			house_sizes[i] = house_initial_sizes[i];
 		}
 	}
 
 	// Move sword
-	sword_direction += sword_direction_random(gen);
+	GLfloat d = sword_direction_random(gen);
+	sword_direction += d;
 	if (sword_direction < SWORD_DIRECTION_MIN)
 	{
 		sword_direction = SWORD_DIRECTION_MIN;
@@ -545,13 +572,12 @@ void timer(int value)
 	{
 		sword_direction = SWORD_DIRECTION_MAX;
 	}
-	GLfloat sword_angle = 90 * TO_RADIAN + current_angle() + sword_direction;
-	sword_position = sword_position.move(sword_angle, sword_speed);
-	sword_position = sword_position.move(180 * TO_RADIAN + car_angle, car_speed);
-	if (!(-win_width * 0.6f < sword_position.x && sword_position.x < win_width * 0.6f) || !(-win_height * 0.6f < sword_position.y && sword_position.y < win_height * 0.6f))
+	sword_position = sword_position.move(sword_direction, sword_speed);
+	sword_position.x -= car_speed;
+	if (!(-0.6f * win_width < sword_position.x && sword_position.x < win_width * 0.6f) || !(-win_height * 0.6f < sword_position.y && sword_position.y < win_height * 0.6f))
 	{
 		GLfloat new_x = sword_x_random(gen);
-		sword_position = point(new_x, -win_height * 0.5);
+		sword_position = point(new_x, -0.5f * win_height);
 	}
 
 	glutPostRedisplay();
@@ -656,7 +682,7 @@ void greetings(char *program_name, char messages[][256], int n_message_lines)
 
 GLfloat current_angle(void)
 {
-	return std::atan((win_height * 0.5f) / (win_width * (5.0f / 6)));
+	return std::atan((win_height * 0.5f) / (win_width));
 }
 
 #define N_MESSAGE_LINES 2
