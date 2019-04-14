@@ -983,7 +983,6 @@ void timer(int value)
 	// re-scale boom
 	if (boom_flag)
 	{
-		std::cout << boom_counter << ' ' << boom_scale.x << ' ' << boom_coeff << ' ' << boom_tick << '\n';
 		--boom_counter;
 		boom_scale += glm::vec2(boom_coeff * boom_tick, boom_coeff * boom_tick);
 		if (!boom_counter)
