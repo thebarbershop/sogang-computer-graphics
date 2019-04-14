@@ -1,6 +1,6 @@
 CC = g++
 
-CFLAGS = -Wall -Wno-unused-result -O3
+CFLAGS = -Wall -O3 -Werror
 
 OBJS = Simple2DTransformation.o LoadShaders.o
 
@@ -11,7 +11,7 @@ Simple2DTransformation.o : Simple2DTransformation.cpp
 	$(CC) $(CFLAGS) -c Simple2DTransformation.cpp
 
 LoadShaders.o : Shaders/LoadShaders.cpp
-	$(CC) $(CFLAGS) -c Shaders/LoadShaders.cpp
+	$(CC) $(CFLAGS) -Wno-unused-result -c Shaders/LoadShaders.cpp
 
 clean:
 	rm run $(OBJS)
