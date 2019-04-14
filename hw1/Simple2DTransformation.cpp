@@ -26,13 +26,12 @@ glm::mat4 ViewMatrix, ProjectionMatrix, ViewProjectionMatrix;
 //// Function headers ////
 void prepare_scene(void);
 void cleanup(void);
-GLfloat current_angle(void);
 //////////////////////////
 
 //// CUSTUM CONSTANTS ////
 const GLfloat BACKGROUND_COLOR[] = {173 / 255.0f, 255 / 255.0f, 47 / 255.0f}; // R,G,B value of background color (0-255)
 const unsigned int MIN_SPEED = 1;
-const unsigned int MAX_SPEED = 9;
+const unsigned int MAX_SPEED = 15;
 const unsigned int INITIAL_WIDTH = 1280;
 const unsigned int INITIAL_HEIGHT = 800;
 const unsigned int REFRESH_RATE = (unsigned int)(1000 / 30); // == 30 fps
@@ -60,33 +59,20 @@ std::random_device rd;
 std::mt19937 gen(rd());
 //////////////////////////
 
-//// CUSTUM DATA STRUCTURE ////
-struct point
+//// CUSTUM FUNCTIONS ////
+GLfloat current_angle(void)
 {
-	GLfloat x, y;
-	point(GLfloat x, GLfloat y) : x(x), y(y) {}
-	point() { point(0.0f, 0.0f); }
-	point move(const GLfloat angle, const GLfloat displacement) const
-	{
-		// move the point by given angle and displacement
-		GLfloat x1 = x + displacement * std::cos(angle);
-		GLfloat y1 = y + displacement * std::sin(angle);
-		return point(x1, y1);
-	}
+	return std::atan((win_height * 0.5f) / (win_width));
+}
 
-	point operator*(const point &rhs) const
-	{
-		GLfloat x1 = x * rhs.x;
-		GLfloat y1 = y * rhs.y;
-		return point(x1, y1);
-	}
-
-	GLfloat distance(const point &rhs) const
-	{
-		return std::sqrt((x - rhs.x) * (x - rhs.x) + (y - rhs.y) * (y - rhs.y));
-	}
-};
-///////////////////////////////
+glm::vec2 move(const glm::vec2 vec, const GLfloat angle, const GLfloat displacement)
+{
+	// move the vector by given angle and displacement
+	GLfloat x1 = vec.x + displacement * std::cos(angle);
+	GLfloat y1 = vec.y + displacement * std::sin(angle);
+	return glm::vec2(x1, y1);
+}
+////
 
 //// DESIGN ROAD ////
 const unsigned int ROAD_MAIN = 0;
@@ -183,7 +169,7 @@ GLfloat house_color[5][3] = {
 };
 
 const size_t n_house = 4;
-std::vector<point> house_positions;
+std::vector<glm::vec2> house_positions;
 const std::vector<GLfloat> house_initial_positions = {
 	0.5f,
 	0.475f,
@@ -199,8 +185,8 @@ const std::vector<GLfloat> house_initial_positions = {
 	-0.375f,
 }; // initial positions, propotional to win_width and win_height
 
-std::vector<point> house_scales;
-const point house_initial_scale = point(3.0f, 3.0f);
+std::vector<glm::vec2> house_scales;
+const glm::vec2 house_initial_scale = glm::vec2(3.0f, 3.0f);
 
 GLuint VBO_house, VAO_house;
 void prepare_house()
@@ -237,8 +223,8 @@ void prepare_house()
 	std::shuffle(tmp_house_positions.begin(), tmp_house_positions.end(), gen);
 	for (size_t i = 0; i < n_house; ++i)
 	{
-		house_positions.push_back(point(house_displacement_random(gen), tmp_house_positions[i] * win_height));
-		house_scales.push_back(point(house_initial_scale.x, house_initial_scale.y));
+		house_positions.push_back(glm::vec2(house_displacement_random(gen), tmp_house_positions[i] * win_height));
+		house_scales.push_back(glm::vec2(house_initial_scale.x, house_initial_scale.y));
 	}
 }
 
@@ -292,9 +278,9 @@ GLfloat car2_color[7][3] = {
 	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f},
 	{249 / 255.0f, 244 / 255.0f, 0 / 255.0f}};
 
-point car2_position;
+glm::vec2 car2_position;
 GLfloat car2_displacement = -.4f;
-point car2_scale = point(-4.0f, 4.0f);
+glm::vec2 car2_scale = glm::vec2(-4.0f, 4.0f);
 
 GLuint VBO_car2, VAO_car2;
 void prepare_car2()
@@ -328,7 +314,7 @@ void prepare_car2()
 	glBindVertexArray(0);
 
 	// Initialize car object position
-	car2_position = car2_position.move(0, car2_displacement * win_width);
+	car2_position = move(car2_position, 0, car2_displacement * win_width);
 }
 
 void draw_car2()
@@ -388,9 +374,9 @@ GLfloat sword_color[7][3] = {
 
 GLuint VBO_sword, VAO_sword;
 
-point sword_scale(5.0f, 5.0f);
+glm::vec2 sword_scale(5.0f, 5.0f);
 GLfloat sword_direction;
-point sword_position;
+glm::vec2 sword_position;
 
 void prepare_sword()
 {
@@ -423,7 +409,7 @@ void prepare_sword()
 
 	// Initialize sword position out of screen
 	// Actual position is randomly assigned by sword_timer
-	sword_position = point(win_width, win_height);
+	sword_position = glm::vec2(win_width, win_height);
 	sword_direction = 90 * TO_RADIAN;
 }
 
@@ -478,8 +464,8 @@ GLfloat cake_color[5][3] = {
 
 GLuint VBO_cake, VAO_cake;
 
-point cake_position;
-const point cake_scale(2.5f, 2.5f);
+glm::vec2 cake_position;
+const glm::vec2 cake_scale(2.5f, 2.5f);
 
 void prepare_cake()
 {
@@ -510,7 +496,7 @@ void prepare_cake()
 	glBindVertexArray(0);
 
 	// Initialize cake position
-	cake_position = point(0.45f * win_width, 0.45f * win_height);
+	cake_position = glm::vec2(0.45f * win_width, 0.45f * win_height);
 }
 
 void draw_cake()
@@ -564,7 +550,7 @@ GLfloat car_color[7][3] = {
 
 GLuint VBO_car, VAO_car;
 
-point car_scale(10.0f, 10.0f);
+glm::vec2 car_scale(10.0f, 10.0f);
 GLfloat car_angle;
 
 void prepare_car()
@@ -677,7 +663,7 @@ GLfloat boom_color[2][3] = {
 	{0x8B / 255.0f, 0x00 / 255.0f, 0x00 / 255.0f},
 };
 
-point boom_scale(8.0f, 8.0f);
+glm::vec2 boom_scale(8.0f, 8.0f);
 
 GLuint VBO_boom, VAO_boom;
 
@@ -717,6 +703,106 @@ void draw_boom()
 	glBindVertexArray(0);
 }
 //// DESIGN BOOM END ////
+
+//// DESIGN AIRPLANE ////
+const unsigned int AIRPLANE_BIG_WING = 0;
+const unsigned int AIRPLANE_SMALL_WING = 1;
+const unsigned int AIRPLANE_BODY = 2;
+const unsigned int AIRPLANE_BACK = 3;
+const unsigned int AIRPLANE_SIDEWINDER1 = 4;
+const unsigned int AIRPLANE_SIDEWINDER2 = 5;
+const unsigned int AIRPLANE_CENTER = 6;
+GLfloat big_wing[6][2] = {{0.0, 0.0}, {-20.0, 15.0}, {-20.0, 20.0}, {0.0, 23.0}, {20.0, 20.0}, {20.0, 15.0}};
+GLfloat small_wing[6][2] = {{0.0, -18.0}, {-11.0, -12.0}, {-12.0, -7.0}, {0.0, -10.0}, {12.0, -7.0}, {11.0, -12.0}};
+GLfloat body[5][2] = {{0.0, -25.0}, {-6.0, 0.0}, {-6.0, 22.0}, {6.0, 22.0}, {6.0, 0.0}};
+GLfloat back[5][2] = {{0.0, 25.0}, {-7.0, 24.0}, {-7.0, 21.0}, {7.0, 21.0}, {7.0, 24.0}};
+GLfloat sidewinder1[5][2] = {{-20.0, 10.0}, {-18.0, 3.0}, {-16.0, 10.0}, {-18.0, 20.0}, {-20.0, 20.0}};
+GLfloat sidewinder2[5][2] = {{20.0, 10.0}, {18.0, 3.0}, {16.0, 10.0}, {18.0, 20.0}, {20.0, 20.0}};
+GLfloat center[1][2] = {{0.0, 0.0}};
+GLfloat airplane_color[7][3] = {
+	{150 / 255.0f, 129 / 255.0f, 183 / 255.0f}, // big_wing
+	{245 / 255.0f, 211 / 255.0f, 0 / 255.0f},   // small_wing
+	{111 / 255.0f, 85 / 255.0f, 157 / 255.0f},  // body
+	{150 / 255.0f, 129 / 255.0f, 183 / 255.0f}, // back
+	{245 / 255.0f, 211 / 255.0f, 0 / 255.0f},   // sidewinder1
+	{245 / 255.0f, 211 / 255.0f, 0 / 255.0f},   // sidewinder2
+	{255 / 255.0f, 0 / 255.0f, 0 / 255.0f}		// center
+};
+
+GLuint VBO_airplane, VAO_airplane;
+
+glm::vec2 airplane_position;
+glm::vec2 airplane_scale(3.0f, 3.0f);
+GLfloat airplane_angle;
+
+void prepare_airplane()
+{
+	GLsizeiptr buffer_size = sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back) + sizeof(sidewinder1) + sizeof(sidewinder2) + sizeof(center);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_airplane);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_airplane);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(big_wing), big_wing);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing), sizeof(small_wing), small_wing);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing), sizeof(body), body);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body), sizeof(back), back);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back),
+					sizeof(sidewinder1), sidewinder1);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back) + sizeof(sidewinder1), sizeof(sidewinder2), sidewinder2);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(big_wing) + sizeof(small_wing) + sizeof(body) + sizeof(back) + sizeof(sidewinder1) + sizeof(sidewinder2), sizeof(center), center);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_airplane);
+	glBindVertexArray(VAO_airplane);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_airplane);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	// Initialize airplane position and angle
+	std::uniform_real_distribution<> airplane_initial_position_random(-1.0f / 3, 1.0f / 3);
+	GLfloat x = airplane_initial_position_random(gen) * win_width;
+	GLfloat y = airplane_initial_position_random(gen) * win_height;
+	airplane_position = glm::vec2(x, y);
+
+	std::uniform_real_distribution<> airplane_initial_angle_random(0.0f, 360 * TO_RADIAN);
+}
+
+void draw_airplane()
+{ // Draw airplane in its MC.
+	glBindVertexArray(VAO_airplane);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_BIG_WING]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_SMALL_WING]);
+	glDrawArrays(GL_TRIANGLE_FAN, 6, 6);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 12, 5);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_BACK]);
+	glDrawArrays(GL_TRIANGLE_FAN, 17, 5);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_SIDEWINDER1]);
+	glDrawArrays(GL_TRIANGLE_FAN, 22, 5);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_SIDEWINDER2]);
+	glDrawArrays(GL_TRIANGLE_FAN, 27, 5);
+
+	glUniform3fv(loc_primitive_color, 1, airplane_color[AIRPLANE_CENTER]);
+	glPointSize(5.0);
+	glDrawArrays(GL_POINTS, 32, 1);
+	glPointSize(1.0);
+	glBindVertexArray(0);
+}
+//// DESIGN AIRPLANE END ////
 
 void display(void)
 {
@@ -809,6 +895,7 @@ void keyboard(unsigned char key, int x, int y)
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
 	case 'p':
+	case 'P':
 		if (!gameover_flag)
 		{
 			pause = !pause;
@@ -864,7 +951,7 @@ void timer(int value)
 	if (gameover_flag)
 	{
 		car_speed = 0;
-		car_scale = car_scale * point(1.01f, 1.01f);
+		car_scale = 1.01f * car_scale;
 		car_angle = car_angle + 10 * TO_RADIAN;
 		if (car_angle > 360 * TO_RADIAN)
 		{
@@ -888,7 +975,7 @@ void timer(int value)
 	}
 
 	// check for boom
-	if (car2_position.distance(sword_position) < 100.0f)
+	if (glm::length(car2_position - sword_position) < 100.0f)
 	{
 		if (!boom_flag)
 		{
@@ -906,14 +993,17 @@ void timer(int value)
 	}
 
 	// Move house
-	for (size_t i = 0; i < n_house; ++i)
+	if (!gameover_flag)
 	{
-		house_scales[i] = house_scales[i] * point(1.002f, 1.002f);
-		house_positions[i].x -= car_speed;
-		if (house_positions[i].x < -0.6f * win_width)
+		for (size_t i = 0; i < n_house; ++i)
 		{
-			house_positions[i] = point(0.6f * win_width, house_initial_positions[house_initial_random(gen)] * win_height);
-			house_scales[i] = house_initial_scale;
+			house_scales[i] = 1.004f * house_scales[i];
+			house_positions[i].x -= car_speed;
+			if (house_positions[i].x < -0.6f * win_width)
+			{
+				house_positions[i] = glm::vec2(0.6f * win_width, house_initial_positions[house_initial_random(gen)] * win_height);
+				house_scales[i] = house_initial_scale;
+			}
 		}
 	}
 
@@ -941,12 +1031,12 @@ void timer(int value)
 		sword_speed = SWORD_SPEED_MAX;
 	}
 
-	sword_position = sword_position.move(sword_direction, sword_speed);
+	sword_position = move(sword_position, sword_direction, sword_speed);
 	sword_position.x -= car_speed;
 	if (!(-0.6f * win_width < sword_position.x && sword_position.x < win_width * 0.6f) || !(-win_height * 0.6f < sword_position.y && sword_position.y < win_height * 0.6f))
 	{
 		GLfloat new_x = sword_x_random(gen);
-		sword_position = point(new_x, -0.5f * win_height);
+		sword_position = glm::vec2(new_x, -0.5f * win_height);
 	}
 
 	glutPostRedisplay();
@@ -1008,6 +1098,7 @@ void prepare_scene(void)
 	prepare_cake();
 	prepare_car();
 	prepare_boom();
+	prepare_airplane();
 }
 
 void initialize_renderer(void)
@@ -1052,11 +1143,6 @@ void greetings(char *program_name, char messages[][256], int n_message_lines)
 	initialize_glew();
 }
 
-GLfloat current_angle(void)
-{
-	return std::atan((win_height * 0.5f) / (win_width));
-}
-
 #define N_MESSAGE_LINES 4
 int main(int argc, char *argv[])
 {
@@ -1082,4 +1168,5 @@ int main(int argc, char *argv[])
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 	glutMainLoop();
+	return 0;
 }
