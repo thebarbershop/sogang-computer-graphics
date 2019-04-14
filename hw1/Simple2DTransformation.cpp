@@ -50,7 +50,7 @@ int win_width = 0,
 unsigned int car_speed = 10; // car moves 15 per tick
 GLfloat sword_speed = 10;
 bool pause = false;
-int n_heart = 5;
+int n_heart = 3;
 bool boom_flag = false;
 bool gameover_flag = false;
 
@@ -673,7 +673,14 @@ GLfloat boom_color[2][3] = {
 	{0x8B / 255.0f, 0x00 / 255.0f, 0x00 / 255.0f},
 };
 
-glm::vec2 boom_scale(8.0f, 8.0f);
+glm::vec2 boom_scale;
+unsigned int boom_counter;
+
+const GLfloat BOOM_SCALE_MIN = 8.0f;
+const GLfloat BOOM_SCALE_MAX = 16.0f;
+const unsigned int BOOM_COUNTER_MAX = 5;
+int boom_coeff;
+const GLfloat boom_tick = (BOOM_SCALE_MAX - BOOM_SCALE_MIN) / (BOOM_COUNTER_MAX - 1);
 
 GLuint VBO_boom, VAO_boom;
 
@@ -698,6 +705,11 @@ void prepare_boom()
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+
+	// Initialize boom counter
+	boom_counter = BOOM_COUNTER_MAX;
+	boom_scale = glm::vec2(BOOM_SCALE_MIN, BOOM_SCALE_MIN);
+	boom_coeff = 1;
 }
 
 void draw_boom()
@@ -954,7 +966,7 @@ void timer(int value)
 		if (!boom_flag)
 		{
 			boom_flag = true;
-			n_heart--;
+			--n_heart;
 			if (n_heart == 0)
 			{
 				gameover_flag = true;
@@ -964,6 +976,21 @@ void timer(int value)
 	else
 	{
 		boom_flag = false;
+		boom_counter = BOOM_COUNTER_MAX;
+		boom_scale = glm::vec2(BOOM_SCALE_MIN, BOOM_SCALE_MIN);
+	}
+
+	// re-scale boom
+	if (boom_flag)
+	{
+		std::cout << boom_counter << ' ' << boom_scale.x << ' ' << boom_coeff << ' ' << boom_tick << '\n';
+		--boom_counter;
+		boom_scale += glm::vec2(boom_coeff * boom_tick, boom_coeff * boom_tick);
+		if (!boom_counter)
+		{
+			boom_counter = BOOM_COUNTER_MAX;
+			boom_coeff *= -1;
+		}
 	}
 
 	// Move car2
