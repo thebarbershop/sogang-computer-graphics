@@ -62,7 +62,8 @@ std::mt19937 gen(rd());
 //// CUSTUM FUNCTIONS ////
 GLfloat current_angle(void)
 {
-	return std::atan(1.0f * win_height / win_width);
+	return 0;
+	//	return std::atan(1.0f * win_height / win_width);
 }
 
 glm::vec2 move(const glm::vec2 vec, const GLfloat angle, const GLfloat displacement)
@@ -175,21 +176,6 @@ GLfloat house_color[5][3] = {
 
 const size_t n_house = 4;
 std::vector<glm::vec2> house_positions;
-const std::vector<GLfloat> house_initial_positions = {
-	0.5f,
-	0.475f,
-	0.45f,
-	0.425f,
-	0.4f,
-	0.375f,
-	-0.5f,
-	-0.475f,
-	-0.45f,
-	-0.425f,
-	-0.4f,
-	-0.375f,
-}; // initial positions, propotional to win_width and win_height
-
 std::vector<glm::vec2> house_scales;
 const glm::vec2 house_initial_scale = glm::vec2(3.0f, 3.0f);
 
@@ -197,7 +183,6 @@ GLuint VBO_house, VAO_house;
 void prepare_house()
 {
 	GLsizeiptr buffer_size = sizeof(roof) + sizeof(house_body) + sizeof(chimney) + sizeof(door) + sizeof(window);
-	std::uniform_real_distribution<> house_displacement_random(-0.5f * win_width, 0.5f * win_width);
 
 	// Initialize vertex buffer object.
 	glGenBuffers(1, &VBO_house);
@@ -224,12 +209,15 @@ void prepare_house()
 	glBindVertexArray(0);
 
 	// Initialize house position
-	std::vector<GLfloat> tmp_house_positions(house_initial_positions);
-	std::shuffle(tmp_house_positions.begin(), tmp_house_positions.end(), gen);
+	std::uniform_real_distribution<GLfloat> house_y_random(0.35f * win_height, 0.5f * win_height);
 	for (size_t i = 0; i < n_house; ++i)
 	{
-		house_positions.push_back(glm::vec2(house_displacement_random(gen), tmp_house_positions[i] * win_height));
+		int sign = (i % 2) ? 1 : -1;
+		GLfloat x = (1.0f * (i + 1) / (n_house + 1) - 0.5f) * win_width;
+		GLfloat y = sign * house_y_random(gen);
+		house_positions.push_back(glm::vec2(x, y));
 		house_scales.push_back(glm::vec2(house_initial_scale.x, house_initial_scale.y));
+		std::cout << x << ' ' << y << '\n';
 	}
 }
 
@@ -1010,8 +998,9 @@ void timer(int value)
 			house_positions[i].x -= car_speed;
 			if (house_positions[i].x < -0.6f * win_width)
 			{
-				std::uniform_int_distribution<size_t> house_initial_random(0, house_initial_positions.size() - 1);
-				house_positions[i] = glm::vec2(0.6f * win_width, house_initial_positions[house_initial_random(gen)] * win_height);
+				std::uniform_real_distribution<GLfloat> house_y_random(0.35f * win_height, 0.5f * win_height);
+				int sign = (house_positions[i].y > 0) ? 1 : -1;
+				house_positions[i] = glm::vec2(0.6f * win_width, sign * house_y_random(gen));
 				house_scales[i] = house_initial_scale;
 			}
 		}
