@@ -216,7 +216,6 @@ void prepare_house()
 		GLfloat y = sign * house_y_random(gen);
 		house_positions.push_back(glm::vec2(x, y));
 		house_scales.push_back(glm::vec2(house_initial_scale.x, house_initial_scale.y));
-		std::cout << x << ' ' << y << '\n';
 	}
 }
 
