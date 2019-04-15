@@ -62,7 +62,7 @@ std::mt19937 gen(rd());
 //// CUSTUM FUNCTIONS ////
 GLfloat current_angle(void)
 {
-	return std::atan((win_height * 0.5f) / (win_width));
+	return std::atan(1.0f * win_height / win_width);
 }
 
 glm::vec2 move(const glm::vec2 vec, const GLfloat angle, const GLfloat displacement)
