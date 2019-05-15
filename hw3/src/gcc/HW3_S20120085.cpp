@@ -44,7 +44,10 @@ GLfloat rotation_angle_tiger = 0.0f;
 GLfloat speed_tiger = 4.0f;
 glm::vec3 position_tiger;
 
+const float speed_car = 2.0f;
+const float speed_wheel = 10.0f;
 float rotation_angle_car = 0.0f;
+float rotation_angle_wheel = 0.0f;
 
 void draw_objects_in_world(void)
 {
@@ -55,10 +58,9 @@ void draw_objects_in_world(void)
 #define ww 1.0f
 void draw_wheel_and_nut()
 {
-	// angle is used in Hierarchical_Car_Correct later
 	int i;
 
-	glUniform3fv(loc_primitive_color, 1, color::dark_turquoise);
+	glUniform3fv(loc_primitive_color, 1, color::black);
 	draw_geom_obj(GEOM_OBJ_ID_CAR_WHEEL); // draw wheel
 
 	for (i = 0; i < 5; i++)
@@ -73,6 +75,11 @@ void draw_wheel_and_nut()
 	}
 }
 
+const glm::vec3 car_wheel_position[4] = {
+	glm::vec3(-3.9f, -3.5f, 4.5f),
+	glm::vec3(3.9f, -3.5f, 4.5f),
+	glm::vec3(-3.9f, -3.5f, -4.5f),
+	glm::vec3(3.9f, -3.5f, -4.5f)};
 void draw_car_dummy(void)
 {
 	glUniform3fv(loc_primitive_color, 1, color::aquamarine);
@@ -90,27 +97,22 @@ void draw_car_dummy(void)
 	draw_axes(); // draw camera frame at driver seat
 	glLineWidth(1.0f);
 
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.9f, -3.5f, 4.5f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut(); // draw wheel 0
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(3.9f, -3.5f, 4.5f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut(); // draw wheel 1
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.9f, -3.5f, -4.5f));
-	ModelMatrix_CAR_WHEEL = glm::scale(ModelMatrix_CAR_WHEEL, glm::vec3(1.0f, 1.0f, -1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut(); // draw wheel 2
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(3.9f, -3.5f, -4.5f));
-	ModelMatrix_CAR_WHEEL = glm::scale(ModelMatrix_CAR_WHEEL, glm::vec3(1.0f, 1.0f, -1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut(); // draw wheel 3
+	for (int i = 0; i < 4; i++)
+	{
+		ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, car_wheel_position[i]);
+		if (!(i & 1)) // Rotate front wheels
+		{
+			ModelMatrix_CAR_WHEEL = glm::rotate(ModelMatrix_CAR_WHEEL, 7.5f * TO_RADIAN, glm::vec3(-1.0f, 0.0f, 0.0f));
+		}
+		ModelMatrix_CAR_WHEEL = glm::rotate(ModelMatrix_CAR_WHEEL, rotation_angle_wheel, glm::vec3(0.0f, 0.0f, 1.0f));
+		if (i > 1) // Flip right side wheels
+		{
+			ModelMatrix_CAR_WHEEL = glm::scale(ModelMatrix_CAR_WHEEL, glm::vec3(1.0f, 1.0f, -1.0f));
+		}
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_wheel_and_nut(); // draw wheel 0~3
+	}
 }
 
 /*********************************  START: callbacks *********************************/
@@ -139,7 +141,7 @@ void display(void)
 
 	// Draw Car
 	ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
+	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(30.0f, 4.89f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (camera_type == CAMERA_DRIVER)
@@ -174,39 +176,47 @@ void keyboard(unsigned char key, int x, int y)
 		if (flag_animation)
 		{
 			glutTimerFunc(100, timer_scene, 0);
-			fprintf(stdout, "^^^ Animation mode ON.\n");
+			fprintf(stdout, "Animation mode ON.\n");
 		}
 		else
-			fprintf(stdout, "^^^ Animation mode OFF.\n");
+			fprintf(stdout, "Animation mode OFF.\n");
 		break;
 	case 'f': // Fill polygon
 		polygonMode = 1;
 		setPolygonMode();
 		glutPostRedisplay();
+		fprintf(stdout, "Fill Polygon.\n");
 		break;
 	case 'l': // Draw only skeleton
 		polygonMode = 0;
 		setPolygonMode();
 		glutPostRedisplay();
+		fprintf(stdout, "Draw Only Lines.\n");
 		break;
 	case 'd': // Driver cam
 		camera_type = CAMERA_DRIVER;
 		glutPostRedisplay();
+		fprintf(stdout, "Driver Cam.\n");
 		break;
 	case 'w': // World cam
 		camera_type = CAMERA_WORLD_VIEWER;
 		set_ViewMatrix_for_world_viewer();
 		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 		glutPostRedisplay();
-		break;
-	case 'o': // World objects
-		flag_draw_world_objects = 1 - flag_draw_world_objects;
-		glutPostRedisplay();
+		fprintf(stdout, "World Cam.\n");
 		break;
 	case 'n': // Next frame
 		flag_animation = 0;
 		timer_scene(0);
 		glutPostRedisplay();
+		fprintf(stdout, "Next frame.\n");
+		break;
+	case 'p': // Previous frame
+		flag_animation = 0;
+		timestamp_scene -= 2;
+		timer_scene(0);
+		glutPostRedisplay();
+		fprintf(stdout, "Previous frame.\n");
 		break;
 	case 27:				 // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
@@ -264,7 +274,8 @@ void timer_scene(int value)
 {
 
 	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
-	rotation_angle_car = (timestamp_scene % 360) * TO_RADIAN;
+	rotation_angle_car = ((int)(timestamp_scene * speed_car) % 360) * TO_RADIAN;
+	rotation_angle_wheel = ((int)(timestamp_scene * speed_wheel) % 360) * TO_RADIAN;
 
 	// Calculate position and frame of tiger
 	static float previous_vec_tan_tiger;
