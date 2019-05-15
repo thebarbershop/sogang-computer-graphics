@@ -318,13 +318,11 @@ void draw_floor(void)
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	current_size += 4;
 
-	glLineWidth(2.0f);
 	glUniform3fv(loc_primitive_color, 1, grid_color);
 	glDrawArrays(GL_LINES, current_size, 2 * (n_grid + 1));
 	current_size += 2 * (n_grid + 1);
 	glDrawArrays(GL_LINES, current_size, 2 * (n_grid + 1));
 	current_size += 2 * (n_grid + 1);
-	glLineWidth(1.0f);
 
 	glBindVertexArray(0);
 	polygonMode = orig_polygonMode;
@@ -336,5 +334,116 @@ void free_floor(void)
 	glDeleteVertexArrays(1, &floor_VAO);
 	glDeleteBuffers(1, &floor_VBO);
 }
+
+int read_geometry(GLfloat **object, int bytes_per_primitive, char *filename)
+{
+	int n_triangles;
+	FILE *fp;
+
+	fprintf(stdout, "Reading geometry from the geometry file %s...\n", filename);
+	fp = fopen(filename, "rb");
+	if (fp == NULL)
+	{
+		fprintf(stderr, "Cannot open the object file %s ...", filename);
+		return -1;
+	}
+	if (!fread(&n_triangles, sizeof(int), 1, fp))
+	{
+		fprintf(stderr, "Cannot read value of n_triangles");
+		return -1;
+	}
+
+	*object = (float *)malloc(n_triangles * bytes_per_primitive);
+	if (*object == NULL)
+	{
+		fprintf(stderr, "Cannot allocate memory for the geometry file %s ...", filename);
+		return -1;
+	}
+
+	if (fread(*object, bytes_per_primitive, n_triangles, fp) < (unsigned)n_triangles)
+	{
+		fprintf(stderr, "Cannot read objects");
+		return -1;
+	}
+	fprintf(stdout, "Read %d primitives successfully.\n\n", n_triangles);
+	fclose(fp);
+
+	return n_triangles;
+}
+
+// tiger object
+int cur_frame_tiger = 0;
+#define N_TIGER_FRAMES 12
+GLuint tiger_VBO, tiger_VAO;
+int tiger_n_triangles[N_TIGER_FRAMES];
+int tiger_vertex_offset[N_TIGER_FRAMES];
+GLfloat *tiger_vertices[N_TIGER_FRAMES];
+
+void prepare_tiger(void)
+{ // vertices enumerated clockwise
+	int i, n_bytes_per_vertex, n_bytes_per_triangle, tiger_n_total_triangles = 0;
+	char filename[512];
+
+	n_bytes_per_vertex = 8 * sizeof(float); // 3 for vertex, 3 for normal, and 2 for texcoord
+	n_bytes_per_triangle = 3 * n_bytes_per_vertex;
+
+	for (i = 0; i < N_TIGER_FRAMES; i++)
+	{
+		sprintf(filename, "Data/dynamic_objects/tiger/Tiger_%d%d_triangles_vnt.geom", i / 10, i % 10);
+		tiger_n_triangles[i] = read_geometry(&tiger_vertices[i], n_bytes_per_triangle, filename);
+
+		// assume all geometry files are effective
+		tiger_n_total_triangles += tiger_n_triangles[i];
+
+		if (i == 0)
+			tiger_vertex_offset[i] = 0;
+		else
+			tiger_vertex_offset[i] = tiger_vertex_offset[i - 1] + 3 * tiger_n_triangles[i - 1];
+	}
+
+	// initialize vertex buffer object
+	glGenBuffers(1, &tiger_VBO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, tiger_VBO);
+	glBufferData(GL_ARRAY_BUFFER, tiger_n_total_triangles * n_bytes_per_triangle, NULL, GL_STATIC_DRAW);
+
+	for (i = 0; i < N_TIGER_FRAMES; i++)
+		glBufferSubData(GL_ARRAY_BUFFER, tiger_vertex_offset[i] * n_bytes_per_vertex,
+						tiger_n_triangles[i] * n_bytes_per_triangle, tiger_vertices[i]);
+
+	// as the geometry data exists now in graphics memory, ...
+	for (i = 0; i < N_TIGER_FRAMES; i++)
+		free(tiger_vertices[i]);
+
+	// initialize vertex array object
+	glGenVertexArrays(1, &tiger_VAO);
+	glBindVertexArray(tiger_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, tiger_VBO);
+	glVertexAttribPointer(LOC_VERTEX, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(0));
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(LOC_NORMAL, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(LOC_TEXCOORD, 2, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+void draw_tiger(void)
+{
+	//	glFrontFace(GL_CW);
+
+	glBindVertexArray(tiger_VAO);
+	glDrawArrays(GL_TRIANGLES, tiger_vertex_offset[cur_frame_tiger], 3 * tiger_n_triangles[cur_frame_tiger]);
+	glBindVertexArray(0);
+}
+
+void free_tiger(void)
+{
+	glDeleteVertexArrays(1, &tiger_VAO);
+	glDeleteBuffers(1, &tiger_VBO);
+}
+
 /* END Custom Code */
 /*********************************  END: geometry *********************************/

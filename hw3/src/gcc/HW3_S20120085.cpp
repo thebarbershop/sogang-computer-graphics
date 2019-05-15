@@ -12,6 +12,7 @@
 #include "Shaders/LoadShaders.h"
 GLuint h_ShaderProgram;									  // handle to shader program
 GLint loc_ModelViewProjectionMatrix, loc_primitive_color; // indices of uniform variables
+GLint loc_ModelViewProjectionMatrix_TXPS, loc_ModelViewMatrix_TXPS, loc_ModelViewMatrixInvTrans_TXPS;
 
 // #include glm/*.hpp only if necessary
 // #include <glm/glm.hpp>
@@ -19,6 +20,8 @@ GLint loc_ModelViewProjectionMatrix, loc_primitive_color; // indices of uniform 
 #include <glm/gtc/matrix_inverse.hpp>   //inverse, affineInverse, etc.
 glm::mat4 ModelViewProjectionMatrix;
 glm::mat4 ViewProjectionMatrix, ViewMatrix, ProjectionMatrix;
+glm::mat4 ModelViewMatrix;
+glm::mat3 ModelViewMatrixInvTrans;
 
 glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER;
 glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_camera()
@@ -28,6 +31,13 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #ifndef INT_MAX
 #define INT_MAX INT32_MAX
 #endif
+
+void timer_scene(int);
+
+// for tiger animation
+unsigned int timestamp_scene = 0; // the global clock in the scene
+int flag_animation = 1;
+float rotation_angle_tiger = 0.0f;
 
 float rotation_angle_car = 0.0f;
 
@@ -110,7 +120,9 @@ void display(void)
 
 	ModelViewProjectionMatrix = ViewProjectionMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	glLineWidth(3.0f);
 	draw_floor();
+	glLineWidth(1.0f);
 
 	ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
@@ -125,13 +137,22 @@ void display(void)
 
 	ModelViewProjectionMatrix = glm::scale(ViewProjectionMatrix, glm::vec3(5.0f, 5.0f, 5.0f));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	glLineWidth(2.0f);
+	glLineWidth(5.0f);
 	draw_axes();
 	glLineWidth(1.0f);
 
 	// ModelViewProjectionMatrix = ViewProjectionMatrix;
 	// glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	// draw_path();
+
+	ModelViewMatrix = glm::scale(ViewMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
+	ModelViewMatrix = glm::rotate(ModelViewMatrix, -rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewMatrix = glm::translate(ModelViewMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
+	ModelViewMatrix = glm::rotate(ModelViewMatrix, -90.0f * TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
+	ModelViewMatrixInvTrans = glm::inverseTranspose(glm::mat3(ModelViewMatrix));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_tiger();
 
 	if (flag_draw_world_objects)
 		draw_objects_in_world();
@@ -143,6 +164,16 @@ void keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case 'a': // toggle the animation effect.
+		flag_animation = 1 - flag_animation;
+		if (flag_animation)
+		{
+			glutTimerFunc(100, timer_scene, 0);
+			fprintf(stdout, "^^^ Animation mode ON.\n");
+		}
+		else
+			fprintf(stdout, "^^^ Animation mode OFF.\n");
+		break;
 	case 'f': // Fill polygon
 		polygonMode = 1;
 		setPolygonMode();
@@ -221,9 +252,13 @@ void reshape(int width, int height)
 
 void timer_scene(int timestamp_scene)
 {
+	//	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
 	rotation_angle_car = (timestamp_scene % 360) * TO_RADIAN;
+	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
+	rotation_angle_tiger = (timestamp_scene % 360) * TO_RADIAN;
 	glutPostRedisplay();
-	glutTimerFunc(100, timer_scene, (timestamp_scene + 1) % INT_MAX);
+	if (flag_animation)
+		glutTimerFunc(100, timer_scene, (timestamp_scene + 1) % INT_MAX);
 }
 
 void cleanup(void)
@@ -231,6 +266,7 @@ void cleanup(void)
 	free_axes();
 	free_path();
 	free_floor();
+	free_tiger();
 
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
 	free_geom_obj(GEOM_OBJ_ID_CAR_WHEEL);
@@ -263,7 +299,6 @@ void prepare_shader_program(void)
 	h_ShaderProgram = LoadShaders(shader_info);
 	glUseProgram(h_ShaderProgram);
 
-	loc_ModelViewProjectionMatrix = glGetUniformLocation(h_ShaderProgram, "u_ModelViewProjectionMatrix");
 	loc_primitive_color = glGetUniformLocation(h_ShaderProgram, "u_primitive_color");
 }
 
@@ -288,6 +323,7 @@ void prepare_scene(void)
 	prepare_axes();
 	prepare_path();
 	prepare_floor();
+	prepare_tiger();
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_NUT, "Data/car_nut_triangles_v.txt", GEOM_OBJ_TYPE_V);
