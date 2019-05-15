@@ -34,21 +34,6 @@ void set_ViewMatrix_for_driver(void)
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 
-/*
-void set_ViewMatrix_for_driver2(void) { // This version does not use the glm::affineInverse(*) function.
-	glm::mat4 Matrix_CAMERA;
-
-	Matrix_CAMERA = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
-	Matrix_CAMERA = glm::translate(Matrix_CAMERA, glm::vec3(20.0f, 4.89f, 0.0f));
-	Matrix_CAMERA = glm::rotate(Matrix_CAMERA, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	Matrix_CAMERA = glm::translate(Matrix_CAMERA, glm::vec3(-3.0f, 0.5f, 2.5f));
-	Matrix_CAMERA = glm::rotate(Matrix_CAMERA, TO_RADIAN*90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-
-	ViewMatrix = glm::affineInverse(Matrix_CAMERA);
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-}
-*/
-
 void initialize_camera(void)
 {
 	camera_type = CAMERA_WORLD_VIEWER;
