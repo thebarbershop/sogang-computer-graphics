@@ -41,7 +41,7 @@ void timer_scene(int);
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
 GLfloat rotation_angle_tiger = 0.0f;
-GLfloat speed_tiger = 3.0f;
+GLfloat speed_tiger = 4.0f;
 glm::vec3 position_tiger;
 
 float rotation_angle_car = 0.0f;
@@ -203,6 +203,11 @@ void keyboard(unsigned char key, int x, int y)
 		flag_draw_world_objects = 1 - flag_draw_world_objects;
 		glutPostRedisplay();
 		break;
+	case 'n': // Next frame
+		flag_animation = 0;
+		timer_scene(0);
+		glutPostRedisplay();
+		break;
 	case 27:				 // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
@@ -257,15 +262,19 @@ void reshape(int width, int height)
 
 void timer_scene(int value)
 {
+
 	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
 	rotation_angle_car = (timestamp_scene % 360) * TO_RADIAN;
 
 	// Calculate position and frame of tiger
+	static float previous_vec_tan_tiger;
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
-
 	position_tiger = getTigerCoordinates(timestamp_scene * speed_tiger);
 	glm::vec3 direction_vec_tiger = getTigerCoordinates((timestamp_scene + 1) * speed_tiger) - position_tiger;
-	rotation_angle_tiger = std::atan2(direction_vec_tiger.x, direction_vec_tiger.z);
+	float atan2 = std::atan2(direction_vec_tiger.x, direction_vec_tiger.z);
+	rotation_angle_tiger = 0.5f * (atan2 + previous_vec_tan_tiger);
+	previous_vec_tan_tiger = atan2;
+
 	glutPostRedisplay();
 	if (flag_animation)
 		glutTimerFunc(100, timer_scene, 0);
