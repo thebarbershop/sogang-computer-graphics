@@ -176,47 +176,54 @@ void keyboard(unsigned char key, int x, int y)
 		if (flag_animation)
 		{
 			glutTimerFunc(100, timer_scene, 0);
-			fprintf(stdout, "Animation mode ON.\n");
+			fprintf(stderr, "Animation mode ON.\n");
 		}
 		else
-			fprintf(stdout, "Animation mode OFF.\n");
+			fprintf(stderr, "Animation mode OFF.\n");
 		break;
 	case 'f': // Fill polygon
 		polygonMode = 1;
 		setPolygonMode();
 		glutPostRedisplay();
-		fprintf(stdout, "Fill Polygon.\n");
+		fprintf(stderr, "Fill Polygon.\n");
 		break;
 	case 'l': // Draw only skeleton
 		polygonMode = 0;
 		setPolygonMode();
 		glutPostRedisplay();
-		fprintf(stdout, "Draw Only Lines.\n");
+		fprintf(stderr, "Draw Only Lines.\n");
 		break;
 	case 'd': // Driver cam
 		camera_type = CAMERA_DRIVER;
 		glutPostRedisplay();
-		fprintf(stdout, "Driver Cam.\n");
+		fprintf(stderr, "Driver Cam.\n");
 		break;
 	case 'w': // World cam
 		camera_type = CAMERA_WORLD_VIEWER;
 		set_ViewMatrix_for_world_viewer();
 		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 		glutPostRedisplay();
-		fprintf(stdout, "World Cam.\n");
+		fprintf(stderr, "World Cam.\n");
 		break;
 	case 'n': // Next frame
 		flag_animation = 0;
 		timer_scene(0);
 		glutPostRedisplay();
-		fprintf(stdout, "Next frame.\n");
+		fprintf(stderr, "Next frame.\n");
 		break;
 	case 'p': // Previous frame
 		flag_animation = 0;
 		timestamp_scene -= 2;
 		timer_scene(0);
 		glutPostRedisplay();
-		fprintf(stdout, "Previous frame.\n");
+		fprintf(stderr, "Previous frame.\n");
+		break;
+	case 'r': // Reset World Cam position
+		initialize_camera();
+		set_ViewMatrix_for_world_viewer();
+		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+		glutPostRedisplay();
+		fprintf(stderr, "Reset World Cam position.\n");
 		break;
 	case 27:				 // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
@@ -224,18 +231,25 @@ void keyboard(unsigned char key, int x, int y)
 	}
 }
 
-int prevx, prevy;
+int is_shift_down;
+int prevx;
 
 void motion(int x, int y)
 {
 	if (!camera_wv.move | (camera_type != CAMERA_WORLD_VIEWER))
 		return;
 
-	renew_cam_position(prevy - y);
-	renew_cam_orientation_rotation_around_v_axis(prevx - x);
+	if (is_shift_down)
+	{
+		renew_cam_position(prevx - x);
+	}
+
+	else
+	{
+		renew_cam_orientation_rotation_around_v_axis(prevx - x);
+	}
 
 	prevx = x;
-	prevy = y;
 
 	set_ViewMatrix_for_world_viewer();
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
@@ -249,12 +263,14 @@ void mouse(int button, int state, int x, int y)
 	{
 		if (state == GLUT_DOWN)
 		{
+			is_shift_down = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
 			camera_wv.move = 1;
 			prevx = x;
-			prevy = y;
 		}
 		else if (state == GLUT_UP)
+		{
 			camera_wv.move = 0;
+		}
 	}
 }
 
@@ -306,6 +322,7 @@ void cleanup(void)
 	free_geom_obj(GEOM_OBJ_ID_TEAPOT);
 	free_geom_obj(GEOM_OBJ_ID_BOX);
 }
+
 /*********************************  END: callbacks *********************************/
 
 void register_callbacks(void)
