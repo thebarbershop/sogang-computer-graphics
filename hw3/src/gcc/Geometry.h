@@ -259,7 +259,7 @@ void free_geom_obj(int geom_obj_ID)
 }
 
 /* START Custom Code */
-const GLfloat floor_size = 30.0f;
+const GLfloat floor_size = 50.0f;
 GLuint floor_VBO, floor_VAO;
 const GLfloat floor_vertices[4][3] = {
 	{floor_size, 0.0f, floor_size}, {-floor_size, 0.0f, floor_size}, {-floor_size, 0.0f, -floor_size}, {floor_size, 0.0f, -floor_size}};
