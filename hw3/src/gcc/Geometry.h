@@ -13,6 +13,9 @@ const GLfloat white[3] = {1.0f, 1.0f, 1.0f};
 const GLfloat green[3] = {0.0f, 1.0f, 0.0f};
 const GLfloat forest_green[3] = {0x30 / 256.0f, 0x81 / 256.0f, 0x28 / 256.0f};
 const GLfloat dark_orange[3] = {0xFF / 256.0f, 0x8C / 256.0f, 0x00 / 256.0f};
+const GLfloat aquamarine[3] = {0.498f, 1.000f, 0.831f};
+const GLfloat dark_turquoise[3] = {0.000f, 0.808f, 0.820f};
+const GLfloat light_steel_blue[3] = {0.690f, 0.769f, 0.871f};
 } // namespace color
 
 /*********************************  START: geometry *********************************/
