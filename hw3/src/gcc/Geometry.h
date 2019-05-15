@@ -1,5 +1,10 @@
+#include <cmath>
+
 GLenum polygonFace = GL_FRONT_AND_BACK;
 int polygonMode = 0;
+
+#define TO_RADIAN 0.01745329252f
+#define TO_DEGREE 57.295779513f
 
 namespace color
 {
@@ -7,6 +12,7 @@ const GLfloat black[3] = {0.0f, 0.0f, 0.0f};
 const GLfloat white[3] = {1.0f, 1.0f, 1.0f};
 const GLfloat green[3] = {0.0f, 1.0f, 0.0f};
 const GLfloat forest_green[3] = {0x30 / 256.0f, 0x81 / 256.0f, 0x28 / 256.0f};
+const GLfloat dark_orange[3] = {0xFF / 256.0f, 0x8C / 256.0f, 0x00 / 256.0f};
 } // namespace color
 
 /*********************************  START: geometry *********************************/
@@ -180,7 +186,7 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 
 	if (!fscanf(fp, "%d", &n_triangles))
 	{
-		fprintf(stderr, "Cannot read value of n_triangles");
+		fprintf(stderr, "Cannot read value of n_triangles from %s\n", filename);
 		return -1;
 	}
 	*object = (float *)malloc(3 * n_triangles * GEOM_OBJ_ELEMENTS_PER_VERTEX[geom_obj_type] * sizeof(float));
@@ -195,7 +201,7 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 	{
 		if (!fscanf(fp, "%f", flt_ptr++))
 		{
-			fprintf(stderr, "Cannot read value %d", i);
+			fprintf(stderr, "Cannot read value %d from %s\n", i, filename);
 			return -1;
 		}
 	}
@@ -340,7 +346,6 @@ int read_geometry(GLfloat **object, int bytes_per_primitive, char *filename)
 	int n_triangles;
 	FILE *fp;
 
-	fprintf(stdout, "Reading geometry from the geometry file %s...\n", filename);
 	fp = fopen(filename, "rb");
 	if (fp == NULL)
 	{
@@ -349,7 +354,7 @@ int read_geometry(GLfloat **object, int bytes_per_primitive, char *filename)
 	}
 	if (!fread(&n_triangles, sizeof(int), 1, fp))
 	{
-		fprintf(stderr, "Cannot read value of n_triangles");
+		fprintf(stderr, "Cannot read value of n_triangles from %s\n", filename);
 		return -1;
 	}
 
@@ -362,10 +367,9 @@ int read_geometry(GLfloat **object, int bytes_per_primitive, char *filename)
 
 	if (fread(*object, bytes_per_primitive, n_triangles, fp) < (unsigned)n_triangles)
 	{
-		fprintf(stderr, "Cannot read objects");
+		fprintf(stderr, "Cannot read objects from %s\n", filename);
 		return -1;
 	}
-	fprintf(stdout, "Read %d primitives successfully.\n\n", n_triangles);
 	fclose(fp);
 
 	return n_triangles;
@@ -378,6 +382,7 @@ GLuint tiger_VBO, tiger_VAO;
 int tiger_n_triangles[N_TIGER_FRAMES];
 int tiger_vertex_offset[N_TIGER_FRAMES];
 GLfloat *tiger_vertices[N_TIGER_FRAMES];
+const GLfloat *tiger_color = color::dark_orange;
 
 void prepare_tiger(void)
 { // vertices enumerated clockwise
@@ -432,9 +437,8 @@ void prepare_tiger(void)
 }
 void draw_tiger(void)
 {
-	//	glFrontFace(GL_CW);
-
 	glBindVertexArray(tiger_VAO);
+	glUniform3fv(loc_primitive_color, 1, tiger_color);
 	glDrawArrays(GL_TRIANGLES, tiger_vertex_offset[cur_frame_tiger], 3 * tiger_n_triangles[cur_frame_tiger]);
 	glBindVertexArray(0);
 }
@@ -443,6 +447,20 @@ void free_tiger(void)
 {
 	glDeleteVertexArrays(1, &tiger_VAO);
 	glDeleteBuffers(1, &tiger_VBO);
+}
+
+glm::vec3 getTigerCoordinates(GLfloat angle)
+{
+	// Parametric heart curve as described in http://mathworld.wolfram.com/HeartCurve.html
+	glm::vec3 pos;
+	GLfloat t = angle * TO_RADIAN;
+	GLfloat sin_t = std::sin(t);
+	GLfloat cos_t = std::cos(t), cos_2t = std::cos(2 * t), cos_3t = std::cos(3 * t), cos_4t = std::cos(4 * t);
+	pos.x = 16 * sin_t * sin_t * sin_t;
+	pos.y = 0.0f;
+	pos.z = 13 * cos_t - 5 * cos_2t - 2 * cos_3t - cos_4t;
+
+	return pos;
 }
 
 /* END Custom Code */

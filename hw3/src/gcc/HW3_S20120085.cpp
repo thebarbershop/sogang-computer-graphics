@@ -31,13 +31,18 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #ifndef INT_MAX
 #define INT_MAX INT32_MAX
 #endif
+#ifndef UINT_MAX
+#define UINT_MAX UINT32_MAX
+#endif
 
 void timer_scene(int);
 
 // for tiger animation
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
-float rotation_angle_tiger = 0.0f;
+GLfloat rotation_angle_tiger = 0.0f;
+GLfloat speed_tiger = 3.0f;
+glm::vec3 position_tiger;
 
 float rotation_angle_car = 0.0f;
 
@@ -118,12 +123,21 @@ void display(void)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// Draw Grid Floor
 	ModelViewProjectionMatrix = ViewProjectionMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	glLineWidth(3.0f);
 	draw_floor();
 	glLineWidth(1.0f);
 
+	// Draw Axes
+	ModelViewProjectionMatrix = glm::scale(ViewProjectionMatrix, glm::vec3(5.0f, 5.0f, 5.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	glLineWidth(5.0f);
+	draw_axes();
+	glLineWidth(1.0f);
+
+	// Draw Car
 	ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -135,20 +149,11 @@ void display(void)
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_car_dummy();
 
-	ModelViewProjectionMatrix = glm::scale(ViewProjectionMatrix, glm::vec3(5.0f, 5.0f, 5.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	glLineWidth(5.0f);
-	draw_axes();
-	glLineWidth(1.0f);
-
-	// ModelViewProjectionMatrix = ViewProjectionMatrix;
-	// glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	// draw_path();
-
-	ModelViewMatrix = glm::scale(ViewMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
-	ModelViewMatrix = glm::rotate(ModelViewMatrix, -rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewMatrix = glm::translate(ModelViewMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
+	// Draw Tiger
+	ModelViewMatrix = glm::translate(ViewMatrix, position_tiger);
+	ModelViewMatrix = glm::rotate(ModelViewMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelViewMatrix = glm::rotate(ModelViewMatrix, -90.0f * TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelViewMatrix = glm::scale(ModelViewMatrix, glm::vec3(0.05f, 0.05f, 0.05f));
 	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
 	ModelViewMatrixInvTrans = glm::inverseTranspose(glm::mat3(ModelViewMatrix));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -250,15 +255,20 @@ void reshape(int width, int height)
 	glutPostRedisplay();
 }
 
-void timer_scene(int timestamp_scene)
+void timer_scene(int value)
 {
-	//	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
+	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
 	rotation_angle_car = (timestamp_scene % 360) * TO_RADIAN;
+
+	// Calculate position and frame of tiger
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
-	rotation_angle_tiger = (timestamp_scene % 360) * TO_RADIAN;
+
+	position_tiger = getTigerCoordinates(timestamp_scene * speed_tiger);
+	glm::vec3 direction_vec_tiger = getTigerCoordinates((timestamp_scene + 1) * speed_tiger) - position_tiger;
+	rotation_angle_tiger = std::atan2(direction_vec_tiger.x, direction_vec_tiger.z);
 	glutPostRedisplay();
 	if (flag_animation)
-		glutTimerFunc(100, timer_scene, (timestamp_scene + 1) % INT_MAX);
+		glutTimerFunc(100, timer_scene, 0);
 }
 
 void cleanup(void)
@@ -369,8 +379,6 @@ void greetings(const char *program_name, char messages[][256], int n_message_lin
 {
 	fprintf(stdout, "**************************************************************\n\n");
 	fprintf(stdout, "  PROGRAM NAME: %s\n\n", program_name);
-	fprintf(stdout, "    This program was coded for CSE4170 students\n");
-	fprintf(stdout, "      of Dept. of Comp. Sci. & Eng., Sogang University.\n\n");
 
 	for (int i = 0; i < n_message_lines; i++)
 		fprintf(stdout, "%s\n", messages[i]);
@@ -382,9 +390,10 @@ void greetings(const char *program_name, char messages[][256], int n_message_lin
 #define N_MESSAGE_LINES 2
 int main(int argc, char *argv[])
 {
-	char program_name[64] = "Sogang CSE4170 4.7.1.Hier_Car_Dummy_Driver_GLSL";
-	char messages[N_MESSAGE_LINES][256] = {"    - Keys used: 'f', l', 'd', 'w', 'o', 'ESC'",
-										   "    - Mouse used: L-Click and move"};
+	char program_name[64] = "HW3_20120085";
+	char messages[N_MESSAGE_LINES][256] = {
+		"    - Keys used: 'f', l', 'd', 'w', 'o', 'ESC'",
+		"    - Mouse used: L-Click and move"};
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
