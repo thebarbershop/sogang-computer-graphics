@@ -129,9 +129,9 @@ void display(void)
 	draw_axes();
 	glLineWidth(1.0f);
 
-	ModelViewProjectionMatrix = ViewProjectionMatrix;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_path();
+	// ModelViewProjectionMatrix = ViewProjectionMatrix;
+	// glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	// draw_path();
 
 	if (flag_draw_world_objects)
 		draw_objects_in_world();
@@ -230,6 +230,7 @@ void cleanup(void)
 {
 	free_axes();
 	free_path();
+	free_floor();
 
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
 	free_geom_obj(GEOM_OBJ_ID_CAR_WHEEL);

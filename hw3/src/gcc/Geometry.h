@@ -1,6 +1,14 @@
 GLenum polygonFace = GL_FRONT_AND_BACK;
 int polygonMode = 0;
 
+namespace color
+{
+const GLfloat black[3] = {0.0f, 0.0f, 0.0f};
+const GLfloat white[3] = {1.0f, 1.0f, 1.0f};
+const GLfloat green[3] = {0.0f, 1.0f, 0.0f};
+const GLfloat forest_green[3] = {0x30 / 256.0f, 0x81 / 256.0f, 0x28 / 256.0f};
+} // namespace color
+
 /*********************************  START: geometry *********************************/
 #define BUFFER_OFFSET(offset) ((GLvoid *)(offset))
 
@@ -67,7 +75,6 @@ int read_path_file(GLfloat **object, const char *filename)
 	float *flt_ptr;
 	FILE *fp;
 
-	fprintf(stdout, "Reading path from the path file %s...\n", filename);
 	fp = fopen(filename, "r");
 	if (fp == NULL)
 	{
@@ -77,7 +84,7 @@ int read_path_file(GLfloat **object, const char *filename)
 
 	if (!fscanf(fp, "%d", &n_vertices))
 	{
-		fprintf(stderr, "Cannot read n_vertices");
+		fprintf(stderr, "Cannot read value of n_vertices");
 		return -1;
 	}
 	*object = (float *)malloc(n_vertices * 3 * sizeof(float));
@@ -92,14 +99,12 @@ int read_path_file(GLfloat **object, const char *filename)
 	{
 		if (fscanf(fp, "%f %f %f", flt_ptr, flt_ptr + 1, flt_ptr + 2) != 3)
 		{
-			fprintf(stderr, "Cannot read three objects");
+			fprintf(stderr, "Cannot read coordinate of vertex %d", i);
 			return -1;
 		}
 		flt_ptr += 3;
 	}
 	fclose(fp);
-
-	fprintf(stdout, "Read %d vertices successfully.\n\n", n_vertices);
 
 	return n_vertices;
 }
@@ -108,7 +113,6 @@ void prepare_path(void)
 { // Draw path.
 	//	return;
 	path_n_vertices = read_path_file(&path_vertices, "Data/path.txt");
-	printf("%d %f\n", path_n_vertices, path_vertices[(path_n_vertices - 1)]);
 	// Initialize vertex array object.
 	glGenVertexArrays(1, &path_VAO);
 	glBindVertexArray(path_VAO);
@@ -167,7 +171,6 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 	float *flt_ptr;
 	FILE *fp;
 
-	fprintf(stdout, "Reading geometry from the geometry file %s...\n", filename);
 	fp = fopen(filename, "r");
 	if (fp == NULL)
 	{
@@ -177,7 +180,7 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 
 	if (!fscanf(fp, "%d", &n_triangles))
 	{
-		fprintf(stderr, "Cannot read n_triangles");
+		fprintf(stderr, "Cannot read value of n_triangles");
 		return -1;
 	}
 	*object = (float *)malloc(3 * n_triangles * GEOM_OBJ_ELEMENTS_PER_VERTEX[geom_obj_type] * sizeof(float));
@@ -192,13 +195,11 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 	{
 		if (!fscanf(fp, "%f", flt_ptr++))
 		{
-			fprintf(stderr, "Cannot read object");
+			fprintf(stderr, "Cannot read value %d", i);
 			return -1;
 		}
 	}
 	fclose(fp);
-
-	fprintf(stdout, "Read %d primitives successfully.\n\n", n_triangles);
 
 	return n_triangles;
 }
@@ -249,19 +250,48 @@ void free_geom_obj(int geom_obj_ID)
 }
 
 /* START Custom Code */
-const GLfloat floor_size = 10.0f;
+const GLfloat floor_size = 30.0f;
 GLuint floor_VBO, floor_VAO;
-GLfloat floor_vertices[4][3] = {
+const GLfloat floor_vertices[4][3] = {
 	{floor_size, 0.0f, floor_size}, {-floor_size, 0.0f, floor_size}, {-floor_size, 0.0f, -floor_size}, {floor_size, 0.0f, -floor_size}};
-GLfloat floor_color[3] = {0.0f, 1.0f, 0.0f};
+const GLfloat *floor_color = color::forest_green;
+const GLfloat *grid_color = color::black;
+const int n_grid = 8;
 
 void prepare_floor(void)
 { // Draw grid floor.
+
+	// Calculate coordinates for grids
+	GLfloat grid_vertices[2 * (n_grid + 1)][2][3];
+	const GLfloat grid_width = floor_size / (GLfloat)n_grid;
+	for (int i = 0; i < (n_grid + 1); i++)
+	{
+		grid_vertices[i][0][0] = -floor_size + grid_width * (GLfloat)(i * 2);
+		grid_vertices[i][0][1] = 0.0f;
+		grid_vertices[i][0][2] = floor_size;
+		grid_vertices[i][1][0] = -floor_size + grid_width * (GLfloat)(i * 2);
+		grid_vertices[i][1][1] = 0.0f;
+		grid_vertices[i][1][2] = -floor_size;
+	}
+	for (int i = n_grid + 1; i < 2 * (n_grid + 1); i++)
+	{
+		grid_vertices[i][0][0] = floor_size;
+		grid_vertices[i][0][1] = 0.0f;
+		grid_vertices[i][0][2] = -floor_size + grid_width * (GLfloat)((i - n_grid - 1) * 2);
+		grid_vertices[i][1][0] = -floor_size;
+		grid_vertices[i][1][1] = 0.0f;
+		grid_vertices[i][1][2] = -floor_size + grid_width * (GLfloat)((i - n_grid - 1) * 2);
+	}
+
+	GLsizeiptr buffer_size = sizeof(floor_vertices) + sizeof(grid_vertices);
 	// Initialize vertex buffer object.
 	glGenBuffers(1, &floor_VBO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, floor_VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(floor_vertices), &floor_vertices[0][0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW);
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(floor_vertices), floor_vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(floor_vertices), sizeof(grid_vertices), grid_vertices);
 
 	// Initialize vertex array object.
 	glGenVertexArrays(1, &floor_VAO);
@@ -280,9 +310,22 @@ void draw_floor(void)
 	int orig_polygonMode = polygonMode;
 	polygonMode = 1;
 	setPolygonMode();
+
+	unsigned int current_size = 0;
+
 	glBindVertexArray(floor_VAO);
 	glUniform3fv(loc_primitive_color, 1, floor_color);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	current_size += 4;
+
+	glLineWidth(2.0f);
+	glUniform3fv(loc_primitive_color, 1, grid_color);
+	glDrawArrays(GL_LINES, current_size, 2 * (n_grid + 1));
+	current_size += 2 * (n_grid + 1);
+	glDrawArrays(GL_LINES, current_size, 2 * (n_grid + 1));
+	current_size += 2 * (n_grid + 1);
+	glLineWidth(1.0f);
+
 	glBindVertexArray(0);
 	polygonMode = orig_polygonMode;
 	setPolygonMode();
