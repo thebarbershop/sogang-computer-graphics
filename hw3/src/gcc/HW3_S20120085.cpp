@@ -150,7 +150,7 @@ void display(void)
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (camera_type == CAMERA_DRIVER)
-		set_ViewMatrix_for_driver();
+		set_ViewProjectionMatrix_for_driver();
 
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -201,8 +201,7 @@ void keyboard(unsigned char key, int x, int y)
 		break;
 	case 'w': // World cam
 		camera_type = CAMERA_WORLD_VIEWER;
-		set_ViewMatrix_for_world_viewer();
-		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+		set_ViewProjectionMatrix_for_world_viewer();
 		glutPostRedisplay();
 		fprintf(stderr, "World Cam.\n");
 		break;
@@ -220,11 +219,11 @@ void keyboard(unsigned char key, int x, int y)
 		fprintf(stderr, "Previous frame.\n");
 		break;
 	case 'r': // Reset World Cam position
-		initialize_camera();
-		set_ViewMatrix_for_world_viewer();
-		refreshPerspective();
+		camera_type = CAMERA_WORLD_VIEWER;
+		camera_wv.fovy = 30.0f;
+		set_ViewProjectionMatrix_for_world_viewer();
 		glutPostRedisplay();
-		fprintf(stderr, "Reset World Cam position.\n");
+		fprintf(stderr, "Reset World Cam.\n");
 		break;
 	case 27:				 // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
@@ -237,24 +236,12 @@ int prevx;
 
 void motion(int x, int y)
 {
-	if (!camera_wv.move | (camera_type != CAMERA_WORLD_VIEWER))
+	if (!camera_wv.move || (camera_type != CAMERA_WORLD_VIEWER) || !is_shift_down)
 		return;
 
-	if (is_shift_down)
-	{
-		renew_cam_fovy(prevx - x);
-		refreshPerspective();
-	}
-
-	else
-	{
-		renew_cam_orientation_rotation_around_v_axis(prevx - x);
-	}
-
+	renew_cam_fovy(prevx - x);
 	prevx = x;
-
-	set_ViewMatrix_for_world_viewer();
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+	set_ViewProjectionMatrix_for_world_viewer();
 
 	glutPostRedisplay();
 }
@@ -282,7 +269,8 @@ void reshape(int width, int height)
 
 	camera_wv.aspect_ratio = (float)width / height;
 
-	refreshPerspective();
+	ProjectionMatrix = glm::perspective(TO_RADIAN * camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 	glutPostRedisplay();
 }
 
