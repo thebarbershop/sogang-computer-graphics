@@ -1,4 +1,6 @@
 /*********************************  START: camera *********************************/
+#include <algorithm>
+
 typedef struct _Camera
 {
 	glm::vec3 pos;
@@ -14,6 +16,10 @@ enum _CameraType
 	CAMERA_WORLD_VIEWER,
 	CAMERA_DRIVER
 } camera_type;
+
+const float CAM_TSPEED = 0.05f;
+const float CAM_FOVY_COEFF = 0.05f;
+const float CAM_RSPEED = 0.1f;
 
 void set_ViewMatrix_for_world_viewer(void)
 {
@@ -38,7 +44,6 @@ void initialize_camera(void)
 {
 	camera_type = CAMERA_WORLD_VIEWER;
 
-	//ViewMatrix = glm::lookAt(glm::vec3(0.0f, 10.0f, 75.0f), glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ViewMatrix = glm::lookAt(glm::vec3(75.0f, 75.0f, 100.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	camera_wv.uaxis = glm::vec3(ViewMatrix[0].x, ViewMatrix[1].x, ViewMatrix[2].x);
@@ -59,19 +64,29 @@ void initialize_camera(void)
 												 TO_RADIAN * 90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-#define CAM_TSPEED 0.05f
-void renew_cam_position(int del)
+void renew_cam_position(const int del)
 {
 	camera_wv.pos += CAM_TSPEED * del * (-camera_wv.naxis);
 }
 
-#define CAM_RSPEED 0.1f
-void renew_cam_orientation_rotation_around_v_axis(int angle)
+void renew_cam_fovy(const float del)
+{
+	camera_wv.fovy = std::max(camera_wv.fovy + del * CAM_FOVY_COEFF, 0.0f);
+	camera_wv.fovy = std::min(camera_wv.fovy, 180.0f);
+}
+
+void renew_cam_orientation_rotation_around_v_axis(const int angle)
 {
 	glm::mat3 RotationMatrix;
 
 	RotationMatrix = glm::mat3(glm::rotate(glm::mat4(1.0), CAM_RSPEED * TO_RADIAN * angle, camera_wv.vaxis));
 	camera_wv.uaxis = RotationMatrix * camera_wv.uaxis;
 	camera_wv.naxis = RotationMatrix * camera_wv.naxis;
+}
+
+void refreshPerspective(void)
+{
+	ProjectionMatrix = glm::perspective(TO_RADIAN * camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 /*********************************  END: camera *********************************/

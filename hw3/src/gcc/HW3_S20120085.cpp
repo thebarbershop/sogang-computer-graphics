@@ -222,7 +222,7 @@ void keyboard(unsigned char key, int x, int y)
 	case 'r': // Reset World Cam position
 		initialize_camera();
 		set_ViewMatrix_for_world_viewer();
-		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+		refreshPerspective();
 		glutPostRedisplay();
 		fprintf(stderr, "Reset World Cam position.\n");
 		break;
@@ -242,7 +242,8 @@ void motion(int x, int y)
 
 	if (is_shift_down)
 	{
-		renew_cam_position(prevx - x);
+		renew_cam_fovy(prevx - x);
+		refreshPerspective();
 	}
 
 	else
@@ -281,9 +282,7 @@ void reshape(int width, int height)
 
 	camera_wv.aspect_ratio = (float)width / height;
 
-	ProjectionMatrix = glm::perspective(TO_RADIAN * camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-
+	refreshPerspective();
 	glutPostRedisplay();
 }
 
