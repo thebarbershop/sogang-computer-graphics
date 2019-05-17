@@ -1,5 +1,3 @@
-#include <cmath>
-
 GLenum polygonFace = GL_FRONT_AND_BACK;
 int polygonMode = 0;
 
@@ -17,6 +15,12 @@ const GLfloat aquamarine[3] = {0.498f, 1.000f, 0.831f};
 const GLfloat dark_turquoise[3] = {0.000f, 0.808f, 0.820f};
 const GLfloat light_steel_blue[3] = {0.690f, 0.769f, 0.871f};
 } // namespace color
+
+// wheel numbers
+const int WHEEL_FRONT_LEFT = 0b00;
+const int WHEEL_REAR_LEFT = 0b01;
+const int WHEEL_FRONT_RIGHT = 0b10;
+const int WHEEL_REAR_RIGHT = 0b11;
 
 /*********************************  START: geometry *********************************/
 #define BUFFER_OFFSET(offset) ((GLvoid *)(offset))
@@ -450,20 +454,6 @@ void free_tiger(void)
 {
 	glDeleteVertexArrays(1, &tiger_VAO);
 	glDeleteBuffers(1, &tiger_VBO);
-}
-
-glm::vec3 getTigerCoordinates(GLfloat angle)
-{
-	// Parametric heart curve as described in http://mathworld.wolfram.com/HeartCurve.html
-	glm::vec3 pos;
-	GLfloat t = angle * TO_RADIAN;
-	GLfloat sin_t = std::sin(t);
-	GLfloat cos_t = std::cos(t), cos_2t = std::cos(2 * t), cos_3t = std::cos(3 * t), cos_4t = std::cos(4 * t);
-	pos.x = 16 * sin_t * sin_t * sin_t;
-	pos.y = 0.0f;
-	pos.z = 13 * cos_t - 5 * cos_2t - 2 * cos_3t - cos_4t;
-
-	return pos;
 }
 
 /* END Custom Code */

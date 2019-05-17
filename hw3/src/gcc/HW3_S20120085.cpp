@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <cfloat>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
@@ -18,6 +19,8 @@ GLint loc_ModelViewProjectionMatrix_TXPS, loc_ModelViewMatrix_TXPS, loc_ModelVie
 // #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> //translate, rotate, scale, lookAt, perspective, etc.
 #include <glm/gtc/matrix_inverse.hpp>   //inverse, affineInverse, etc.
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/fast_trigonometry.hpp>
 glm::mat4 ModelViewProjectionMatrix;
 glm::mat4 ViewProjectionMatrix, ViewMatrix, ProjectionMatrix;
 glm::mat4 ModelViewMatrix;
@@ -26,6 +29,7 @@ glm::mat3 ModelViewMatrixInvTrans;
 glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER;
 glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_camera()
 
+#include "custommath.hpp"
 #include "Camera.h"
 #include "Geometry.h"
 #ifndef INT_MAX
@@ -36,23 +40,20 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #endif
 
 void timer_scene(int);
-
-// for tiger animation
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
-GLfloat rotation_angle_tiger = 0.0f;
-GLfloat speed_tiger = 4.0f;
+
+// for car animation
+const float speed_car = 1.0f;
+float rotation_angle_car;
+glm::vec2 steering_angle_wheel; // .x: steering angle of left wheel, .y: steering angle of right wheel
+float rotation_angle_wheel;
+glm::vec3 position_car;
+
+// for tiger animation
+const float speed_tiger = 4.0f;
+float rotation_angle_tiger = 0.0f;
 glm::vec3 position_tiger;
-
-const float speed_car = 2.0f;
-const float speed_wheel = 10.0f;
-float rotation_angle_car = 0.0f;
-float rotation_angle_wheel = 0.0f;
-
-void draw_objects_in_world(void)
-{
-	// Removed
-}
 
 #define rad 1.7f
 #define ww 1.0f
@@ -100,12 +101,16 @@ void draw_car_dummy(void)
 	for (int i = 0; i < 4; i++)
 	{
 		ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, car_wheel_position[i]);
-		if (!(i & 1)) // Rotate front wheels
+		if (i == WHEEL_FRONT_LEFT)
 		{
-			ModelMatrix_CAR_WHEEL = glm::rotate(ModelMatrix_CAR_WHEEL, 7.5f * TO_RADIAN, glm::vec3(-1.0f, 0.0f, 0.0f));
+			ModelMatrix_CAR_WHEEL = glm::rotate(ModelMatrix_CAR_WHEEL, steering_angle_wheel.x, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+		if (i == WHEEL_FRONT_RIGHT)
+		{
+			ModelMatrix_CAR_WHEEL = glm::rotate(ModelMatrix_CAR_WHEEL, steering_angle_wheel.y, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 		ModelMatrix_CAR_WHEEL = glm::rotate(ModelMatrix_CAR_WHEEL, rotation_angle_wheel, glm::vec3(0.0f, 0.0f, 1.0f));
-		if (i > 1) // Flip right side wheels
+		if (i == WHEEL_FRONT_RIGHT || i == WHEEL_REAR_RIGHT)
 		{
 			ModelMatrix_CAR_WHEEL = glm::scale(ModelMatrix_CAR_WHEEL, glm::vec3(1.0f, 1.0f, -1.0f));
 		}
@@ -116,7 +121,6 @@ void draw_car_dummy(void)
 }
 
 /*********************************  START: callbacks *********************************/
-int flag_draw_world_objects = 1;
 
 void display(void)
 {
@@ -140,8 +144,9 @@ void display(void)
 	glLineWidth(1.0f);
 
 	// Draw Car
-	ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(30.0f, 4.89f, 0.0f));
+	ModelMatrix_CAR_BODY = glm::translate(glm::mat4(1.0f), position_car);
+	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 4.89f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (camera_type == CAMERA_DRIVER)
@@ -157,12 +162,8 @@ void display(void)
 	ModelViewMatrix = glm::rotate(ModelViewMatrix, -90.0f * TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
 	ModelViewMatrix = glm::scale(ModelViewMatrix, glm::vec3(0.05f, 0.05f, 0.05f));
 	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
-	ModelViewMatrixInvTrans = glm::inverseTranspose(glm::mat3(ModelViewMatrix));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_tiger();
-
-	if (flag_draw_world_objects)
-		draw_objects_in_world();
 
 	glutSwapBuffers();
 }
@@ -290,17 +291,41 @@ void timer_scene(int value)
 {
 
 	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
-	rotation_angle_car = ((int)(timestamp_scene * speed_car) % 360) * TO_RADIAN;
-	rotation_angle_wheel = ((int)(timestamp_scene * speed_wheel) % 360) * TO_RADIAN;
+
+	// Calculate position and frame of car
+	static glm::vec3 previous_position_car;
+	static glm::vec3 next_position_car;
+	previous_position_car = position_car;
+	position_car = next_position_car;
+	next_position_car = getButterflyCurve((timestamp_scene + 1) * speed_car);
+	glm::vec3 direction_vec_car = next_position_car - previous_position_car;
+	rotation_angle_car = std::atan2(direction_vec_car.x, direction_vec_car.z);
+	glm::vec3 circumcenter = getCircumcenter(previous_position_car, position_car, next_position_car);
+	int orientation = getOrientation(previous_position_car, position_car, next_position_car);
+	if (orientation == 0) // Car is going straight
+	{
+		steering_angle_wheel = glm::vec2(0.0f, 0.0f);
+	}
+	else // Car is steering
+	{
+		steering_angle_wheel = 1.0f * orientation * getSteeringAngle(circumcenter);
+	}
+
+	// Rotate the wheel according to moved distance.
+	rotation_angle_wheel += glm::distance(previous_position_car, position_car) / 1.7f;
+	if (rotation_angle_wheel > 2 * M_PI)
+	{
+		rotation_angle_wheel -= 2 * M_PI;
+	}
 
 	// Calculate position and frame of tiger
-	static float previous_vec_tan_tiger;
+	//static float previous_vec_tan_tiger;
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
-	position_tiger = getTigerCoordinates(timestamp_scene * speed_tiger);
-	glm::vec3 direction_vec_tiger = getTigerCoordinates((timestamp_scene + 1) * speed_tiger) - position_tiger;
-	float atan2 = std::atan2(direction_vec_tiger.x, direction_vec_tiger.z);
-	rotation_angle_tiger = 0.5f * (atan2 + previous_vec_tan_tiger);
-	previous_vec_tan_tiger = atan2;
+	//position_tiger = getHeartCurve(timestamp_scene * speed_tiger);
+	//glm::vec3 direction_vec_tiger = getHeartCurve((timestamp_scene + 1) * speed_tiger) - position_tiger;
+	//float atan2 = std::atan2(direction_vec_tiger.x, direction_vec_tiger.z);
+	//rotation_angle_tiger = 0.5f * (atan2 + previous_vec_tan_tiger);
+	//previous_vec_tan_tiger = atan2;
 
 	glutPostRedisplay();
 	if (flag_animation)
