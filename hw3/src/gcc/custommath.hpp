@@ -47,9 +47,9 @@ glm::vec2 getSteeringAngle(const glm::vec3 &circumcenter)
     const float L = 7.8f;
     const float T_half = 4.5f;
     float R = glm::distance(circumcenter, glm::vec3(3.9f, 0.0f, 0.0f));
-    float a1 = std::atan(L / (R - T_half));
-    float a2 = std::atan(L / (R + T_half));
-    return glm::vec2(a1, a2);
+    float left = std::atan(L / (R - T_half));
+    float right = std::atan(L / (R + T_half));
+    return glm::vec2(left, right);
 }
 
 int getOrientation(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c)
