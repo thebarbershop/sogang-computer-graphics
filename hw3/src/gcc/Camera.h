@@ -17,9 +17,7 @@ enum _CameraType
 	CAMERA_DRIVER
 } camera_type;
 
-const float CAM_TSPEED = 0.05f;
 const float CAM_FOVY_COEFF = 0.05f;
-const float CAM_RSPEED = 0.1f;
 
 void set_ViewProjectionMatrix_for_world_viewer(void)
 {
@@ -54,7 +52,8 @@ void initialize_world_camera(void)
 	camera_wv.pos = -(ViewMatrix[3].x * camera_wv.uaxis + ViewMatrix[3].y * camera_wv.vaxis + ViewMatrix[3].z * camera_wv.naxis);
 
 	camera_wv.move = 0;
-	camera_wv.fovy = 30.0f, camera_wv.aspect_ratio = 1.0f;
+	camera_wv.fovy = 30.0f;
+	camera_wv.aspect_ratio = (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT);
 	camera_wv.near_c = 5.0f;
 	camera_wv.far_c = 10000.0f;
 	set_ViewProjectionMatrix_for_world_viewer();
@@ -72,7 +71,7 @@ void initialize_camera(void)
 
 void renew_cam_fovy(const float del)
 {
-	camera_wv.fovy = std::max(camera_wv.fovy + del * CAM_FOVY_COEFF, 0.0f);
+	camera_wv.fovy = std::max(camera_wv.fovy + del * CAM_FOVY_COEFF, EPSILON);
 	camera_wv.fovy = std::min(camera_wv.fovy, 180.0f);
 }
 

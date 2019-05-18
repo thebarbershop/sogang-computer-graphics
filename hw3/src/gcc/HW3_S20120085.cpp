@@ -43,6 +43,8 @@ void timer_scene(int);
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
 
+const float SPHERE_COEFF = 0.1f;
+
 // for car animation
 const float speed_car = 1.0f;
 float rotation_angle_car;
@@ -219,9 +221,7 @@ void keyboard(unsigned char key, int x, int y)
 		fprintf(stderr, "Previous frame.\n");
 		break;
 	case 'r': // Reset World Cam position
-		camera_type = CAMERA_WORLD_VIEWER;
-		camera_wv.fovy = 30.0f;
-		set_ViewProjectionMatrix_for_world_viewer();
+		initialize_world_camera();
 		glutPostRedisplay();
 		fprintf(stderr, "Reset World Cam.\n");
 		break;
@@ -229,6 +229,48 @@ void keyboard(unsigned char key, int x, int y)
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
 	}
+}
+
+void special(int key, int x, int y)
+{
+	glm::vec4 tpos;
+	GLfloat fy = camera_wv.pos.y;
+	int flag = 1;
+	if (camera_type != CAMERA_WORLD_VIEWER)
+	{
+		return;
+	}
+	tpos = glm::vec4(camera_wv.pos.x, camera_wv.pos.y, camera_wv.pos.z, 1.0f);
+	switch (key)
+	{
+	case GLUT_KEY_UP:
+		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(-tpos.z, 0.0f, tpos.x)) * tpos;
+		flag = tpos.y > fy; // Camera must move higher
+		fprintf(stderr, "UP key.\n");
+		break;
+	case GLUT_KEY_DOWN:
+		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(tpos.z, 0.0f, -tpos.x)) * tpos;
+		flag = (tpos.y < fy) && (tpos.y > 0.0f); // Camera must move lower but should not go underground
+		fprintf(stderr, "DOWN key.\n");
+		break;
+	case GLUT_KEY_LEFT:
+		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(0.0f, -1.0f, 0.0f)) * tpos;
+		fprintf(stderr, "LEFT key.\n");
+		break;
+	case GLUT_KEY_RIGHT:
+		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(0.0f, 1.0f, 0.0f)) * tpos;
+		fprintf(stderr, "RIGHT key.\n");
+		break;
+	}
+	if (flag)
+	{
+		camera_wv.pos.x = tpos.x;
+		camera_wv.pos.y = tpos.y;
+		camera_wv.pos.z = tpos.z;
+	}
+	ViewMatrix = glm::lookAt(camera_wv.pos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+	glutPostRedisplay();
 }
 
 int is_shift_down;
@@ -341,6 +383,7 @@ void register_callbacks(void)
 {
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
+	glutSpecialFunc(special);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
