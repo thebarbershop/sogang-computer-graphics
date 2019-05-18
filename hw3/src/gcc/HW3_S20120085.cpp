@@ -38,6 +38,7 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #ifndef UINT_MAX
 #define UINT_MAX UINT32_MAX
 #endif
+const unsigned char ESC = 27;
 
 void timer_scene(int);
 unsigned int timestamp_scene = 0; // the global clock in the scene
@@ -184,6 +185,11 @@ void keyboard(unsigned char key, int x, int y)
 		else
 			fprintf(stderr, "Animation mode OFF.\n");
 		break;
+	case 'd': // Driver cam
+		camera_type = CAMERA_DRIVER;
+		glutPostRedisplay();
+		fprintf(stderr, "Driver Cam.\n");
+		break;
 	case 'f': // Fill polygon
 		polygonMode = 1;
 		setPolygonMode();
@@ -195,17 +201,6 @@ void keyboard(unsigned char key, int x, int y)
 		setPolygonMode();
 		glutPostRedisplay();
 		fprintf(stderr, "Draw Only Lines.\n");
-		break;
-	case 'd': // Driver cam
-		camera_type = CAMERA_DRIVER;
-		glutPostRedisplay();
-		fprintf(stderr, "Driver Cam.\n");
-		break;
-	case 'w': // World cam
-		camera_type = CAMERA_WORLD_VIEWER;
-		set_ViewProjectionMatrix_for_world_viewer();
-		glutPostRedisplay();
-		fprintf(stderr, "World Cam.\n");
 		break;
 	case 'n': // Next frame
 		flag_animation = 0;
@@ -225,7 +220,13 @@ void keyboard(unsigned char key, int x, int y)
 		glutPostRedisplay();
 		fprintf(stderr, "Reset World Cam.\n");
 		break;
-	case 27:				 // ESC key
+	case 'w': // World cam
+		camera_type = CAMERA_WORLD_VIEWER;
+		set_ViewProjectionMatrix_for_world_viewer();
+		glutPostRedisplay();
+		fprintf(stderr, "World Cam.\n");
+		break;
+	case ESC:
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
 	}
