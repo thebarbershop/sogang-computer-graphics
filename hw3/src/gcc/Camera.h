@@ -74,7 +74,6 @@ void initialize_world_camera(void)
 
 void initialize_sub_camera(void)
 {
-	//	GLfloat sqrt2 = glm::sqrt(2);
 	ViewMatrix = glm::lookAt(glm::vec3(0.0f, 100.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	camera_sub.uaxis = glm::vec3(ViewMatrix[0].x, ViewMatrix[1].x, ViewMatrix[2].x);
 	camera_sub.vaxis = glm::vec3(ViewMatrix[0].y, ViewMatrix[1].y, ViewMatrix[2].y);
