@@ -10,6 +10,7 @@ const GLfloat dark_orange[3] = {0xFF / 256.0f, 0x8C / 256.0f, 0x00 / 256.0f};
 const GLfloat aquamarine[3] = {0.498f, 1.000f, 0.831f};
 const GLfloat dark_turquoise[3] = {0.000f, 0.808f, 0.820f};
 const GLfloat light_steel_blue[3] = {0.690f, 0.769f, 0.871f};
+const GLfloat fire_brick[3] = {0xB2 / 256.0f, 0x22 / 256.0f, 0x22 / 256.0f};
 } // namespace color
 
 // wheel numbers
@@ -408,6 +409,124 @@ void free_tiger(void)
 {
 	glDeleteVertexArrays(1, &tiger_VAO);
 	glDeleteBuffers(1, &tiger_VBO);
+}
+
+// ironman object
+GLuint ironman_VBO, ironman_VAO;
+int ironman_n_triangles;
+GLfloat *ironman_vertices;
+
+void prepare_ironman(void)
+{
+	int n_bytes_per_vertex, n_bytes_per_triangle, ironman_n_total_triangles = 0;
+	char filename[512];
+
+	n_bytes_per_vertex = 8 * sizeof(float); // 3 for vertex, 3 for normal, and 2 for texcoord
+	n_bytes_per_triangle = 3 * n_bytes_per_vertex;
+
+	sprintf(filename, "Data/static_objects/ironman_vnt.geom");
+	ironman_n_triangles = read_geometry(&ironman_vertices, n_bytes_per_triangle, filename);
+	// assume all geometry files are effective
+	ironman_n_total_triangles += ironman_n_triangles;
+
+	// initialize vertex buffer object
+	glGenBuffers(1, &ironman_VBO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, ironman_VBO);
+	glBufferData(GL_ARRAY_BUFFER, ironman_n_total_triangles * 3 * n_bytes_per_vertex, ironman_vertices, GL_STATIC_DRAW);
+
+	// as the geometry data exists now in graphics memory, ...
+	free(ironman_vertices);
+
+	// initialize vertex array object
+	glGenVertexArrays(1, &ironman_VAO);
+	glBindVertexArray(ironman_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, ironman_VBO);
+	glVertexAttribPointer(LOC_VERTEX, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(0));
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(LOC_NORMAL, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(LOC_TEXCOORD, 2, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_ironman(void)
+{
+	glFrontFace(GL_CW);
+
+	glBindVertexArray(ironman_VAO);
+	glDrawArrays(GL_TRIANGLES, 0, 3 * ironman_n_triangles);
+	glBindVertexArray(0);
+}
+
+void free_ironman(void)
+{
+	glDeleteVertexArrays(1, &ironman_VAO);
+	glDeleteBuffers(1, &ironman_VBO);
+}
+
+// bus object
+GLuint bus_VBO, bus_VAO;
+int bus_n_triangles;
+GLfloat *bus_vertices;
+const GLfloat *bus_color = color::fire_brick;
+
+void prepare_bus(void)
+{
+	int n_bytes_per_vertex, n_bytes_per_triangle, bus_n_total_triangles = 0;
+	char filename[512];
+
+	n_bytes_per_vertex = 8 * sizeof(float); // 3 for vertex, 3 for normal, and 2 for texcoord
+	n_bytes_per_triangle = 3 * n_bytes_per_vertex;
+
+	sprintf(filename, "Data/static_objects/bus_vnt.geom");
+	bus_n_triangles = read_geometry(&bus_vertices, n_bytes_per_triangle, filename);
+	// assume all geometry files are effective
+	bus_n_total_triangles += bus_n_triangles;
+
+	// initialize vertex buffer object
+	glGenBuffers(1, &bus_VBO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, bus_VBO);
+	glBufferData(GL_ARRAY_BUFFER, bus_n_total_triangles * 3 * n_bytes_per_vertex, bus_vertices, GL_STATIC_DRAW);
+
+	// as the geometry data exists now in graphics memory, ...
+	free(bus_vertices);
+
+	// initialize vertex array object
+	glGenVertexArrays(1, &bus_VAO);
+	glBindVertexArray(bus_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, bus_VBO);
+	glVertexAttribPointer(LOC_VERTEX, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(0));
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(LOC_NORMAL, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(LOC_TEXCOORD, 2, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_bus(void)
+{
+	glFrontFace(GL_CW);
+
+	glBindVertexArray(bus_VAO);
+	glUniform3fv(loc_primitive_color, 1, bus_color);
+	glDrawArrays(GL_TRIANGLES, 0, 3 * bus_n_triangles);
+	glBindVertexArray(0);
+}
+
+void free_bus(void)
+{
+	glDeleteVertexArrays(1, &bus_VAO);
+	glDeleteBuffers(1, &bus_VBO);
 }
 
 /* END Custom Code */

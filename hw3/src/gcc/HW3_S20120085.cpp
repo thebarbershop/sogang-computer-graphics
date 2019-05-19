@@ -140,6 +140,12 @@ void draw_car_dummy(void)
 	}
 }
 
+void draw_box(void)
+{
+	glUniform3fv(loc_primitive_color, 1, color::fire_brick);
+	draw_geom_obj(GEOM_OBJ_ID_BOX);
+}
+
 void draw_objects(void)
 {
 	glm::mat4 ModelMatrix_big_cow, ModelMatrix_small_cow;
@@ -178,6 +184,25 @@ void draw_objects(void)
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_TIGER;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_tiger();
+
+	// Draw Ironman
+	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(20.0f, 20.0f, 20.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_ironman();
+
+	// Draw Bus
+	setPolygonMode(1);
+	for (auto &path_state : path_states)
+	{
+		ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, path_state.pos);
+		ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, path_state.angle + M_PI_2f32, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, M_PI_2f32, glm::vec3(1.0f, 0.0f, 0.0f));
+		ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.05f, 0.05f, 0.05f));
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_bus();
+	}
+	setPolygonMode(flag_polygon_mode);
 }
 
 /*********************************  START: callbacks *********************************/
@@ -349,7 +374,6 @@ void reshape(int width, int height)
 
 void timer_scene(int value)
 {
-
 	timestamp_scene = (timestamp_scene + 1) % UINT_MAX;
 
 	// Calculate position and frame of car
@@ -357,7 +381,7 @@ void timer_scene(int value)
 	static glm::vec3 next_position_car;
 	previous_position_car = position_car;
 	position_car = next_position_car;
-	next_position_car = getButterflyCurve((timestamp_scene + 1) * speed_car);
+	next_position_car = glm::vec3(getButterflyCurve((timestamp_scene + 1) * speed_car));
 	glm::vec3 direction_vec_car = next_position_car - previous_position_car;
 	rotation_angle_car = std::atan2(direction_vec_car.y, direction_vec_car.x);
 	glm::vec3 circumcenter = getCircumcenter(previous_position_car, position_car, next_position_car);
@@ -419,6 +443,8 @@ void cleanup(void)
 	free_axes();
 	free_floor();
 	free_tiger();
+	free_ironman();
+	free_bus();
 
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
 	free_geom_obj(GEOM_OBJ_ID_CAR_WHEEL);
@@ -478,12 +504,15 @@ void prepare_scene(void)
 	prepare_axes();
 	prepare_floor();
 	prepare_tiger();
+	prepare_ironman();
+	prepare_bus();
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_NUT, "Data/car_nut_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_COW, "Data/cow_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_TEAPOT, "Data/teapot_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_BOX, "Data/box_triangles_v.txt", GEOM_OBJ_TYPE_V);
+	initialize_path();
 }
 
 void initialize_renderer(void)
