@@ -85,6 +85,16 @@ int flag_animation_teapot;
 GLfloat rotation_angle_teapot;
 GLfloat rotation_speed_teapot;
 
+// for spider animation
+int flag_animation_spider;
+GLfloat speed_spider;
+GLfloat accel_spider;
+const GLfloat ACCEL_SPIDER_MAX = 1.0f;
+GLfloat height_spider;
+const GLfloat d_accel_spider = 0.1f;
+const GLfloat gravity_spider = -0.1f;
+int flag_stack_spider;
+
 // random number generators
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -186,7 +196,7 @@ void draw_car_and_spider(void)
 		draw_wheel_and_nut(); // draw wheel 0~3
 	}
 
-	ModelMatrix_SPIDER = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 3.2f, 0.0f));
+	ModelMatrix_SPIDER = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 3.2f + height_spider, 0.0f));
 	ModelMatrix_SPIDER = glm::rotate(ModelMatrix_SPIDER, M_PIf32, glm::vec3(0.0f, 0.0f, 1.0f));
 	ModelMatrix_SPIDER = glm::rotate(ModelMatrix_SPIDER, M_PI_2f32, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_SPIDER;
@@ -427,11 +437,26 @@ void mouse(int button, int state, int x, int y)
 		if (state == GLUT_DOWN)
 		{
 			is_shift_down = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
-			camera_wv.move = 1;
-			prevx = x;
+			if (is_shift_down)
+			{
+				camera_wv.move = 1;
+				prevx = x;
+			}
+			else
+			{
+				if (!flag_animation_spider)
+				{
+					flag_stack_spider = 1;
+				}
+			}
 		}
 		else if (state == GLUT_UP)
 		{
+			if (flag_stack_spider)
+			{
+				flag_stack_spider = 0;
+				flag_animation_spider = 1;
+			}
 			camera_wv.move = 0;
 		}
 	}
@@ -511,9 +536,27 @@ void timer_scene(int value)
 	}
 
 	// Calculate rotation angle of teapot animation
+	if (flag_stack_spider)
+	{
+		accel_spider = std::min(accel_spider + d_accel_spider, ACCEL_SPIDER_MAX);
+	}
 	if (flag_animation_teapot)
 	{
 		rotation_angle_teapot = normalizeAngle(rotation_angle_teapot + rotation_speed_teapot);
+	}
+
+	if (flag_animation_spider)
+	{
+		speed_spider += accel_spider;
+		accel_spider += gravity_spider;
+		height_spider += speed_spider;
+		if (height_spider < EPSILON)
+		{
+			height_spider = 0.0f;
+			accel_spider = 0.0f;
+			speed_spider = 0.0f;
+			flag_animation_spider = 0;
+		}
 	}
 	glutPostRedisplay();
 	if (flag_animation)
