@@ -22,9 +22,12 @@ enum _CameraType
 const float WORLD_CAM_FOVY_COEFF = 0.05f;
 const float WORLD_CAM_MANIPULATE_COEFF = 0.1f;
 const float SUB_CAM_MANIPULATE_COEFF = 2.0f;
+const float SUB_CAM_ROTATION_COEFF = 0.01f;
 
 const int CTRL_Z = 26;
 const int CTRL_X = 24;
+const int CTRL_C = 3;
+const int CTRL_V = 22;
 const int CTRL_R = 18;
 
 void set_axes_from_ViewMatrix(Camera &camera)
@@ -34,17 +37,22 @@ void set_axes_from_ViewMatrix(Camera &camera)
 	camera.naxis = glm::vec3(ViewMatrix[0].z, ViewMatrix[1].z, ViewMatrix[2].z);
 	camera.pos = -(ViewMatrix[3].x * camera.uaxis + ViewMatrix[3].y * camera.vaxis + ViewMatrix[3].z * camera.naxis);
 }
-void set_ViewProjectionMatrix(const Camera &camera)
+
+void set_ViewMatrix(const Camera &camera)
 {
 	ViewMatrix = glm::mat4(camera.uaxis.x, camera.vaxis.x, camera.naxis.x, 0.0f,
 						   camera.uaxis.y, camera.vaxis.y, camera.naxis.y, 0.0f,
 						   camera.uaxis.z, camera.vaxis.z, camera.naxis.z, 0.0f,
 						   0.0f, 0.0f, 0.0f, 1.0f);
 	ViewMatrix = glm::translate(ViewMatrix, -camera.pos);
+}
+
+void set_ViewProjectionMatrix(const Camera &camera)
+{
+	set_ViewMatrix(camera);
 	ProjectionMatrix = glm::perspective(TO_RADIAN * camera.fovy, camera.aspect_ratio, camera.near_c, camera.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
-
 void set_ViewProjectionMatrix_for_driver(void)
 {
 	glm::mat4 Matrix_CAMERA_driver_inverse;
@@ -175,6 +183,18 @@ void manipulate_sub_camera(int key)
 		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.naxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
 		fprintf(stderr, "Sub camera moving down.\n");
 		break;
+	case CTRL_C:
+		set_ViewMatrix(camera_sub);
+		ViewMatrix = glm::rotate(ViewMatrix, SUB_CAM_ROTATION_COEFF, camera_sub.vaxis);
+		set_axes_from_ViewMatrix(camera_sub);
+		fprintf(stderr, "Sub camera rotating counter-clockwise.\n");
+		break;
+	case CTRL_V:
+		set_ViewMatrix(camera_sub);
+		ViewMatrix = glm::rotate(ViewMatrix, -SUB_CAM_ROTATION_COEFF, camera_sub.vaxis);
+		set_axes_from_ViewMatrix(camera_sub);
+		fprintf(stderr, "Sub camera rotating clockwise.\n");
+		break;
 	case CTRL_R:
 		initialize_sub_camera();
 		fprintf(stderr, "Sub camera position reset\n");
@@ -188,9 +208,6 @@ void manipulate_sub_camera(int key)
 		camera_sub.pos.y = tpos.y;
 		camera_sub.pos.z = tpos.z;
 	}
-
-	ViewMatrix = glm::lookAt(camera_sub.pos, glm::vec3(camera_sub.pos.x, 0.0f, camera_sub.pos.z), glm::vec3(0.0f, 0.0f, 1.0f));
-	set_axes_from_ViewMatrix(camera_sub);
 }
 
 /*********************************  END: camera *********************************/
