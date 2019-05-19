@@ -17,7 +17,7 @@ glm::mat4 ModelViewProjectionMatrix;
 glm::mat4 ViewProjectionMatrix, ViewMatrix, ProjectionMatrix;
 glm::mat4 ModelViewMatrix;
 
-glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER;
+glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER, ModelMatrix_SPIDER;
 glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_camera()
 
 glm::mat4 ModelMatrix_TIGER, ModelMatrix_TIGER_to_EYE;
@@ -114,7 +114,7 @@ const glm::vec3 car_wheel_position[4] = {
 	glm::vec3(-3.9f, -3.5f, -4.5f),
 	glm::vec3(3.9f, -3.5f, -4.5f)};
 
-void draw_car_dummy(void)
+void draw_car_and_spider(void)
 {
 	glUniform3fv(loc_primitive_color, 1, color::aquamarine);
 	draw_geom_obj(GEOM_OBJ_ID_CAR_BODY); // draw body
@@ -151,6 +151,13 @@ void draw_car_dummy(void)
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_wheel_and_nut(); // draw wheel 0~3
 	}
+
+	ModelMatrix_SPIDER = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 3.2f, 0.0f));
+	ModelMatrix_SPIDER = glm::rotate(ModelMatrix_SPIDER, M_PIf32, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix_SPIDER = glm::rotate(ModelMatrix_SPIDER, M_PI_2f32, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_SPIDER;
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_spider(); // draw spider
 }
 
 void draw_teapot(void)
@@ -188,7 +195,7 @@ void draw_objects(void)
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, M_PI_2f32, glm::vec3(1.0f, 0.0f, 0.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_car_dummy();
+	draw_car_and_spider();
 
 	// Draw Tiger
 	ModelMatrix_TIGER = glm::translate(glm::mat4(1.0f), position_tiger);
@@ -199,7 +206,7 @@ void draw_objects(void)
 	draw_tiger();
 
 	// Draw Ironman
-	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_ironman+glm::vec3(0.0f, 0.0f, 0.5f));
+	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_ironman + glm::vec3(0.0f, 0.0f, 0.5f));
 	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, rotation_angle_ironman, glm::vec3(0.0f, 0.0f, 1.0f));
 	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -465,7 +472,7 @@ void cleanup(void)
 	free_floor();
 	free_tiger();
 	free_ironman();
-	free_ben();
+	free_spider();
 	free_bus();
 
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
@@ -556,7 +563,7 @@ void prepare_scene(void)
 	prepare_floor();
 	prepare_tiger();
 	prepare_ironman();
-	prepare_ben();
+	prepare_spider();
 	prepare_bus();
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);

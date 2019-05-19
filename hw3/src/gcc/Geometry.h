@@ -13,6 +13,7 @@ const GLfloat light_steel_blue[3] = {0.690f, 0.769f, 0.871f};
 const GLfloat fire_brick[3] = {0xB2 / 256.0f, 0x22 / 256.0f, 0x22 / 256.0f};
 const GLfloat lavender[3] = {0xE6 / 256.0f, 0xE6 / 256.0f, 0xFA / 256.0f};
 const GLfloat tan[3] = {0xD2 / 256.0f, 0xB4 / 256.0f, 0x8C / 256.0f};
+const GLfloat rosy_brown[3] = {0xBC / 256.0f, 0x8F / 256.0f, 0x8F / 256.0f};
 } // namespace color
 
 // wheel numbers
@@ -533,55 +534,55 @@ void free_bus(void)
 	glDeleteBuffers(1, &bus_VBO);
 }
 
-// ben object
-const int N_BEN_FRAMES = 30;
-GLuint ben_VBO, ben_VAO;
-int ben_n_triangles[N_BEN_FRAMES];
-int ben_vertex_offset[N_BEN_FRAMES];
-GLfloat *ben_vertices[N_BEN_FRAMES];
-const GLfloat *ben_color = color::tan;
-int cur_frame_ben = 0;
+// spider object
+#define N_SPIDER_FRAMES 16
+GLuint spider_VBO, spider_VAO;
+int spider_n_triangles[N_SPIDER_FRAMES];
+int spider_vertex_offset[N_SPIDER_FRAMES];
+GLfloat *spider_vertices[N_SPIDER_FRAMES];
+int cur_frame_spider;
+const GLfloat *spider_color = color::rosy_brown;
 
-void prepare_ben(void)
+void prepare_spider(void)
 {
-	int i, n_bytes_per_vertex, n_bytes_per_triangle, ben_n_total_triangles = 0;
+	int i, n_bytes_per_vertex, n_bytes_per_triangle, spider_n_total_triangles = 0;
 	char filename[512];
 
 	n_bytes_per_vertex = 8 * sizeof(float); // 3 for vertex, 3 for normal, and 2 for texcoord
 	n_bytes_per_triangle = 3 * n_bytes_per_vertex;
 
-	for (i = 0; i < N_BEN_FRAMES; i++)
+	for (i = 0; i < N_SPIDER_FRAMES; i++)
 	{
-		sprintf(filename, "Data/dynamic_objects/ben/ben_vn%d%d.geom", i / 10, i % 10);
-		ben_n_triangles[i] = read_geometry(&ben_vertices[i], n_bytes_per_triangle, filename);
+		sprintf(filename, "Data/dynamic_objects/spider/spider_vnt_%d%d.geom", i / 10, i % 10);
+		spider_n_triangles[i] = read_geometry(&spider_vertices[i], n_bytes_per_triangle, filename);
 		// assume all geometry files are effective
-		ben_n_total_triangles += ben_n_triangles[i];
+		spider_n_total_triangles += spider_n_triangles[i];
 
 		if (i == 0)
-			ben_vertex_offset[i] = 0;
+			spider_vertex_offset[i] = 0;
 		else
-			ben_vertex_offset[i] = ben_vertex_offset[i - 1] + 3 * ben_n_triangles[i - 1];
+			spider_vertex_offset[i] = spider_vertex_offset[i - 1] + 3 * spider_n_triangles[i - 1];
 	}
 
 	// initialize vertex buffer object
-	glGenBuffers(1, &ben_VBO);
+	glGenBuffers(1, &spider_VBO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, ben_VBO);
-	glBufferData(GL_ARRAY_BUFFER, ben_n_total_triangles * n_bytes_per_triangle, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, spider_VBO);
+	glBufferData(GL_ARRAY_BUFFER, spider_n_total_triangles * n_bytes_per_triangle, NULL, GL_STATIC_DRAW);
 
-	for (i = 0; i < N_BEN_FRAMES; i++)
-		glBufferSubData(GL_ARRAY_BUFFER, ben_vertex_offset[i] * n_bytes_per_vertex,
-						ben_n_triangles[i] * n_bytes_per_triangle, ben_vertices[i]);
+	for (i = 0; i < N_SPIDER_FRAMES; i++)
+		glBufferSubData(GL_ARRAY_BUFFER, spider_vertex_offset[i] * n_bytes_per_vertex,
+						spider_n_triangles[i] * n_bytes_per_triangle, spider_vertices[i]);
 
 	// as the geometry data exists now in graphics memory, ...
-	for (i = 0; i < N_BEN_FRAMES; i++)
-		free(ben_vertices[i]);
+	for (i = 0; i < N_SPIDER_FRAMES; i++)
+		free(spider_vertices[i]);
 
 	// initialize vertex array object
-	glGenVertexArrays(1, &ben_VAO);
-	glBindVertexArray(ben_VAO);
+	glGenVertexArrays(1, &spider_VAO);
+	glBindVertexArray(spider_VAO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, ben_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, spider_VBO);
 	glVertexAttribPointer(LOC_VERTEX, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(0));
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(LOC_NORMAL, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(3 * sizeof(float)));
@@ -593,20 +594,20 @@ void prepare_ben(void)
 	glBindVertexArray(0);
 }
 
-void draw_ben(void)
+void draw_spider(void)
 {
 	glFrontFace(GL_CW);
 
-	glBindVertexArray(ben_VAO);
-	glUniform3fv(loc_primitive_color, 1, ben_color);
-	glDrawArrays(GL_TRIANGLES, ben_vertex_offset[cur_frame_ben], 3 * ben_n_triangles[cur_frame_ben]);
+	glBindVertexArray(spider_VAO);
+	glUniform3fv(loc_primitive_color, 1, spider_color);
+	glDrawArrays(GL_TRIANGLES, spider_vertex_offset[cur_frame_spider], 3 * spider_n_triangles[cur_frame_spider]);
 	glBindVertexArray(0);
 }
 
-void free_ben(void)
+void free_spider(void)
 {
-	glDeleteVertexArrays(1, &ben_VAO);
-	glDeleteBuffers(1, &ben_VBO);
+	glDeleteVertexArrays(1, &spider_VAO);
+	glDeleteBuffers(1, &spider_VBO);
 }
 
 /* END Custom Code */
