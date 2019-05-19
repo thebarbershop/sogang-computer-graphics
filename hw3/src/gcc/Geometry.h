@@ -105,7 +105,7 @@ int read_path_file(GLfloat **object, const char *filename)
 	}
 
 	flt_ptr = *object;
-	for (i = 0; i < n_vertices; i++)
+	for (i = 0; i < n_vertices; ++i)
 	{
 		if (fscanf(fp, "%f %f %f", flt_ptr, flt_ptr + 1, flt_ptr + 2) != 3)
 		{
@@ -201,9 +201,9 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 	}
 
 	flt_ptr = *object;
-	for (i = 0; i < 3 * n_triangles * GEOM_OBJ_ELEMENTS_PER_VERTEX[geom_obj_type]; i++)
+	for (i = 0; i < 3 * n_triangles * GEOM_OBJ_ELEMENTS_PER_VERTEX[geom_obj_type]; ++i)
 	{
-		if (!fscanf(fp, "%f", flt_ptr++))
+		if (!fscanf(fp, "%f", ++flt_ptr))
 		{
 			fprintf(stderr, "Cannot read value %d from %s\n", i, filename);
 			return -1;
@@ -274,7 +274,7 @@ void prepare_floor(void)
 	// Calculate coordinates for grids
 	GLfloat grid_vertices[2 * (n_grid + 1)][2][3];
 	const GLfloat grid_width = floor_size / (GLfloat)n_grid;
-	for (int i = 0; i < (n_grid + 1); i++)
+	for (int i = 0; i < (n_grid + 1); ++i)
 	{
 		grid_vertices[i][0][0] = -floor_size + grid_width * (GLfloat)(i * 2);
 		grid_vertices[i][0][1] = 0.0f;
@@ -283,7 +283,7 @@ void prepare_floor(void)
 		grid_vertices[i][1][1] = 0.0f;
 		grid_vertices[i][1][2] = -floor_size;
 	}
-	for (int i = n_grid + 1; i < 2 * (n_grid + 1); i++)
+	for (int i = n_grid + 1; i < 2 * (n_grid + 1); ++i)
 	{
 		grid_vertices[i][0][0] = floor_size;
 		grid_vertices[i][0][1] = 0.0f;
@@ -396,7 +396,7 @@ void prepare_tiger(void)
 	n_bytes_per_vertex = 8 * sizeof(float); // 3 for vertex, 3 for normal, and 2 for texcoord
 	n_bytes_per_triangle = 3 * n_bytes_per_vertex;
 
-	for (i = 0; i < N_TIGER_FRAMES; i++)
+	for (i = 0; i < N_TIGER_FRAMES; ++i)
 	{
 		sprintf(filename, "Data/dynamic_objects/tiger/Tiger_%d%d_triangles_vnt.geom", i / 10, i % 10);
 		tiger_n_triangles[i] = read_geometry(&tiger_vertices[i], n_bytes_per_triangle, filename);
@@ -416,12 +416,12 @@ void prepare_tiger(void)
 	glBindBuffer(GL_ARRAY_BUFFER, tiger_VBO);
 	glBufferData(GL_ARRAY_BUFFER, tiger_n_total_triangles * n_bytes_per_triangle, NULL, GL_STATIC_DRAW);
 
-	for (i = 0; i < N_TIGER_FRAMES; i++)
+	for (i = 0; i < N_TIGER_FRAMES; ++i)
 		glBufferSubData(GL_ARRAY_BUFFER, tiger_vertex_offset[i] * n_bytes_per_vertex,
 						tiger_n_triangles[i] * n_bytes_per_triangle, tiger_vertices[i]);
 
 	// as the geometry data exists now in graphics memory, ...
-	for (i = 0; i < N_TIGER_FRAMES; i++)
+	for (i = 0; i < N_TIGER_FRAMES; ++i)
 		free(tiger_vertices[i]);
 
 	// initialize vertex array object
