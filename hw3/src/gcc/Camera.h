@@ -21,6 +21,13 @@ enum _CameraType
 
 const float CAM_FOVY_COEFF = 0.05f;
 
+void set_axes_from_ViewMatrix(Camera &camera)
+{
+	camera.uaxis = glm::vec3(ViewMatrix[0].x, ViewMatrix[1].x, ViewMatrix[2].x);
+	camera.vaxis = glm::vec3(ViewMatrix[0].y, ViewMatrix[1].y, ViewMatrix[2].y);
+	camera.naxis = glm::vec3(ViewMatrix[0].z, ViewMatrix[1].z, ViewMatrix[2].z);
+	camera.pos = -(ViewMatrix[3].x * camera.uaxis + ViewMatrix[3].y * camera.vaxis + ViewMatrix[3].z * camera.naxis);
+}
 void set_ViewProjectionMatrix_for_world_viewer(void)
 {
 	ViewMatrix = glm::mat4(camera_wv.uaxis.x, camera_wv.vaxis.x, camera_wv.naxis.x, 0.0f,
@@ -60,10 +67,7 @@ void initialize_world_camera(void)
 	camera_type = CAMERA_WORLD_VIEWER;
 	ViewMatrix = glm::lookAt(glm::vec3(75.0f, 75.0f, 100.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-	camera_wv.uaxis = glm::vec3(ViewMatrix[0].x, ViewMatrix[1].x, ViewMatrix[2].x);
-	camera_wv.vaxis = glm::vec3(ViewMatrix[0].y, ViewMatrix[1].y, ViewMatrix[2].y);
-	camera_wv.naxis = glm::vec3(ViewMatrix[0].z, ViewMatrix[1].z, ViewMatrix[2].z);
-	camera_wv.pos = -(ViewMatrix[3].x * camera_wv.uaxis + ViewMatrix[3].y * camera_wv.vaxis + ViewMatrix[3].z * camera_wv.naxis);
+	set_axes_from_ViewMatrix(camera_wv);
 
 	camera_wv.move = 0;
 	camera_wv.fovy = 30.0f;
@@ -75,10 +79,9 @@ void initialize_world_camera(void)
 void initialize_sub_camera(void)
 {
 	ViewMatrix = glm::lookAt(glm::vec3(0.0f, 100.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	camera_sub.uaxis = glm::vec3(ViewMatrix[0].x, ViewMatrix[1].x, ViewMatrix[2].x);
-	camera_sub.vaxis = glm::vec3(ViewMatrix[0].y, ViewMatrix[1].y, ViewMatrix[2].y);
-	camera_sub.naxis = glm::vec3(ViewMatrix[0].z, ViewMatrix[1].z, ViewMatrix[2].z);
-	camera_sub.pos = -(ViewMatrix[3].x * camera_sub.uaxis + ViewMatrix[3].y * camera_sub.vaxis + ViewMatrix[3].z * camera_sub.naxis);
+
+	set_axes_from_ViewMatrix(camera_sub);
+
 	camera_sub.move = 0;
 	camera_sub.fovy = 30.0f;
 	camera_sub.aspect_ratio = (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT);

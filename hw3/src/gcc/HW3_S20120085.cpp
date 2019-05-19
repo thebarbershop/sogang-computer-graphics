@@ -288,12 +288,15 @@ void special(int key, int x, int y)
 	}
 	if (flag)
 	{
-		camera_wv.pos.x = tpos.x;
 		camera_wv.pos.y = tpos.y;
+		camera_wv.pos.x = tpos.x;
 		camera_wv.pos.z = tpos.z;
+		fprintf(stderr, "%f %f %f\n", camera_wv.pos.y, camera_wv.pos.x, camera_wv.pos.z);
 	}
+
 	ViewMatrix = glm::lookAt(camera_wv.pos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+	set_axes_from_ViewMatrix(camera_wv);
+	set_ViewProjectionMatrix_for_world_viewer();
 	glutPostRedisplay();
 }
 
