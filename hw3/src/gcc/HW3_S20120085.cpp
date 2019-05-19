@@ -13,18 +13,14 @@
 #include "Shaders/LoadShaders.h"
 GLuint h_ShaderProgram;									  // handle to shader program
 GLint loc_ModelViewProjectionMatrix, loc_primitive_color; // indices of uniform variables
-GLint loc_ModelViewProjectionMatrix_TXPS, loc_ModelViewMatrix_TXPS, loc_ModelViewMatrixInvTrans_TXPS;
 
 // #include glm/*.hpp only if necessary
 // #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> //translate, rotate, scale, lookAt, perspective, etc.
 #include <glm/gtc/matrix_inverse.hpp>   //inverse, affineInverse, etc.
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/fast_trigonometry.hpp>
 glm::mat4 ModelViewProjectionMatrix;
 glm::mat4 ViewProjectionMatrix, ViewMatrix, ProjectionMatrix;
 glm::mat4 ModelViewMatrix;
-glm::mat3 ModelViewMatrixInvTrans;
 
 glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER;
 glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_camera()
@@ -43,6 +39,7 @@ const unsigned char ESC = 27;
 void timer_scene(int);
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
+int flag_subwindow = 0;
 
 const float SPHERE_COEFF = 0.1f;
 
@@ -84,6 +81,7 @@ const glm::vec3 car_wheel_position[4] = {
 	glm::vec3(3.9f, -3.5f, 4.5f),
 	glm::vec3(-3.9f, -3.5f, -4.5f),
 	glm::vec3(3.9f, -3.5f, -4.5f)};
+
 void draw_car_dummy(void)
 {
 	glUniform3fv(loc_primitive_color, 1, color::aquamarine);
@@ -123,14 +121,10 @@ void draw_car_dummy(void)
 	}
 }
 
-/*********************************  START: callbacks *********************************/
-
-void display(void)
+void draw_objects(void)
 {
 	glm::mat4 ModelMatrix_big_cow, ModelMatrix_small_cow;
 	glm::mat4 ModelMatrix_big_box, ModelMatrix_small_box;
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Draw Grid Floor
 	ModelViewProjectionMatrix = ViewProjectionMatrix;
@@ -152,9 +146,6 @@ void display(void)
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 4.89f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	if (camera_type == CAMERA_DRIVER)
-		set_ViewProjectionMatrix_for_driver();
-
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_car_dummy();
@@ -167,7 +158,30 @@ void display(void)
 	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_tiger();
+}
 
+/*********************************  START: callbacks *********************************/
+
+void display(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
+	if (camera_type == CAMERA_DRIVER)
+	{
+		set_ViewProjectionMatrix_for_driver();
+	}
+	else
+	{
+		set_ViewProjectionMatrix_for_world_viewer();
+	}
+
+	draw_objects();
+	if (flag_subwindow)
+	{
+		glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 6, glutGet(GLUT_WINDOW_HEIGHT) / 6);
+		set_ViewProjectionMatrix_for_sub();
+		draw_objects();
+	}
 	glutSwapBuffers();
 }
 
@@ -175,6 +189,12 @@ void keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case '1': // Toggle sub window
+		flag_subwindow = 1 - flag_subwindow;
+		fprintf(stderr, "Turn %s sub window\n", flag_subwindow ? "on" : "off");
+		glutPostRedisplay();
+		break;
+	case 'A':
 	case 'a': // toggle the animation effect.
 		flag_animation = 1 - flag_animation;
 		if (flag_animation)
@@ -185,29 +205,34 @@ void keyboard(unsigned char key, int x, int y)
 		else
 			fprintf(stderr, "Animation mode OFF.\n");
 		break;
+	case 'D':
 	case 'd': // Driver cam
 		camera_type = CAMERA_DRIVER;
 		glutPostRedisplay();
 		fprintf(stderr, "Driver Cam.\n");
 		break;
+	case 'F':
 	case 'f': // Fill polygon
 		polygonMode = 1;
 		setPolygonMode();
 		glutPostRedisplay();
 		fprintf(stderr, "Fill Polygon.\n");
 		break;
+	case 'L':
 	case 'l': // Draw only skeleton
 		polygonMode = 0;
 		setPolygonMode();
 		glutPostRedisplay();
 		fprintf(stderr, "Draw Only Lines.\n");
 		break;
+	case 'N':
 	case 'n': // Next frame
 		flag_animation = 0;
 		timer_scene(0);
 		glutPostRedisplay();
 		fprintf(stderr, "Next frame.\n");
 		break;
+	case 'P':
 	case 'p': // Previous frame
 		flag_animation = 0;
 		timestamp_scene -= 2;
@@ -215,11 +240,13 @@ void keyboard(unsigned char key, int x, int y)
 		glutPostRedisplay();
 		fprintf(stderr, "Previous frame.\n");
 		break;
+	case 'R':
 	case 'r': // Reset World Cam position
 		initialize_world_camera();
 		glutPostRedisplay();
 		fprintf(stderr, "Reset World Cam.\n");
 		break;
+	case 'W':
 	case 'w': // World cam
 		camera_type = CAMERA_WORLD_VIEWER;
 		set_ViewProjectionMatrix_for_world_viewer();
@@ -282,7 +309,7 @@ void motion(int x, int y)
 	if (!camera_wv.move || (camera_type != CAMERA_WORLD_VIEWER) || !is_shift_down)
 		return;
 
-	renew_cam_fovy(prevx - x);
+	renew_cam_wv_fovy(prevx - x);
 	prevx = x;
 	set_ViewProjectionMatrix_for_world_viewer();
 
@@ -308,12 +335,20 @@ void mouse(int button, int state, int x, int y)
 
 void reshape(int width, int height)
 {
+	// main window
 	glViewport(0, 0, width, height);
-
 	camera_wv.aspect_ratio = (float)width / height;
 
 	ProjectionMatrix = glm::perspective(TO_RADIAN * camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+	//	glutPostRedisplay();
+
+	// // sub window
+	// glViewport(0, 0, width / 6, height / 6);
+	// camera_sub.aspect_ratio = (float)width / height;
+
+	// ProjectionMatrix_sub = glm::perspective(TO_RADIAN * camera_sub.fovy, camera_sub.aspect_ratio, camera_sub.near_c, camera_sub.far_c);
+	// ViewProjectionMatrix_sub = ProjectionMatrix_sub * ViewMatrix_sub;
 	glutPostRedisplay();
 }
 
