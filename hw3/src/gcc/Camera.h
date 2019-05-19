@@ -15,12 +15,6 @@ typedef struct _Camera
 Camera camera_wv;
 Camera camera_sub;
 
-enum _CameraType
-{
-	CAMERA_WORLD_VIEWER,
-	CAMERA_DRIVER
-} camera_type;
-
 void set_axes_from_ViewMatrix(Camera &camera)
 {
 	camera.uaxis = glm::vec3(ViewMatrix[0].x, ViewMatrix[1].x, ViewMatrix[2].x);
@@ -57,7 +51,6 @@ void set_ViewProjectionMatrix_for_driver(void)
 
 void initialize_world_camera(void)
 {
-	camera_type = CAMERA_WORLD_VIEWER;
 	ViewMatrix = glm::lookAt(glm::vec3(75.0f, 75.0f, 100.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	set_axes_from_ViewMatrix(camera_wv);

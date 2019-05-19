@@ -36,7 +36,8 @@ const unsigned char ESC = 27;
 void timer_scene(int);
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
-int flag_subwindow = 0;
+int flag_sub = 0;
+int flag_driver = 0;
 
 // for car animation
 const float speed_car = 1.0f;
@@ -165,12 +166,11 @@ void display(void)
 	glEnable(GL_SCISSOR_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	(camera_type != CAMERA_DRIVER) ? set_ViewProjectionMatrix(camera_wv)
-								   : set_ViewProjectionMatrix_for_driver();
+	set_ViewProjectionMatrix(camera_wv);
 	draw_objects();
 
 	// Draw sub window
-	if (flag_subwindow)
+	if (flag_sub)
 	{
 		glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
 		glScissor(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
@@ -180,12 +180,24 @@ void display(void)
 		set_ViewProjectionMatrix(camera_sub);
 		draw_objects();
 	}
+
+	// Draw driver window
+	if (flag_driver)
+	{
+		glViewport(0, glutGet(GLUT_WINDOW_HEIGHT)*3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glScissor(0, glutGet(GLUT_WINDOW_HEIGHT)*3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glEnable(GL_SCISSOR_TEST);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		set_ViewProjectionMatrix_for_driver();
+		draw_objects();
+	}
 	glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y)
 {
-	if (flag_subwindow && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
+	if (flag_sub && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
 	{
 		manipulate_sub_camera(key + 'a' - 1);
 		return;
@@ -194,8 +206,13 @@ void keyboard(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case '1': // Toggle sub window
-		flag_subwindow = 1 - flag_subwindow;
-		fprintf(stderr, "Sub window %s\n", flag_subwindow ? "ON" : "OFF");
+		flag_sub = 1 - flag_sub;
+		fprintf(stderr, "Sub camera %s\n", flag_sub ? "ON" : "OFF");
+		glutPostRedisplay();
+		break;
+	case '2': // Driver cam
+		flag_driver = 1 - flag_driver;
+		fprintf(stderr, "Driver camera %s.\n", flag_driver ? "ON" : "OFF");
 		glutPostRedisplay();
 		break;
 	case 'A':
@@ -206,12 +223,6 @@ void keyboard(unsigned char key, int x, int y)
 			glutTimerFunc(100, timer_scene, 0);
 		}
 		fprintf(stderr, "Animation mode %s.\n", flag_animation ? "ON" : "OFF");
-		break;
-	case 'D':
-	case 'd': // Driver cam
-		camera_type = CAMERA_DRIVER;
-		glutPostRedisplay();
-		fprintf(stderr, "Driver Cam.\n");
 		break;
 	case 'F':
 	case 'f': // Fill polygon
@@ -248,13 +259,6 @@ void keyboard(unsigned char key, int x, int y)
 		glutPostRedisplay();
 		fprintf(stderr, "Reset World Cam.\n");
 		break;
-	case 'W':
-	case 'w': // World cam
-		camera_type = CAMERA_WORLD_VIEWER;
-		set_ViewProjectionMatrix(camera_wv);
-		glutPostRedisplay();
-		fprintf(stderr, "World Cam.\n");
-		break;
 	case ESC:
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
@@ -263,12 +267,12 @@ void keyboard(unsigned char key, int x, int y)
 
 void special(int key, int x, int y)
 {
-	if (camera_type == CAMERA_WORLD_VIEWER && !(glutGetModifiers() & GLUT_ACTIVE_CTRL))
+	if (!(glutGetModifiers() & GLUT_ACTIVE_CTRL))
 	{
 		manipulate_world_camera(key);
 	}
 
-	if (flag_subwindow && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
+	if (flag_sub && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
 	{
 		manipulate_sub_camera(key);
 	}
@@ -280,7 +284,7 @@ int prevx;
 
 void motion(int x, int y)
 {
-	if (!camera_wv.move || (camera_type != CAMERA_WORLD_VIEWER) || !is_shift_down)
+	if (!camera_wv.move || !is_shift_down)
 		return;
 
 	renew_camera_fovy(camera_wv, prevx - x);
@@ -311,7 +315,9 @@ void reshape(int width, int height)
 {
 	// main window
 	glViewport(0, 0, width, height);
-	camera_wv.aspect_ratio = (float)width / height;
+	float aspect_ratio = (float)width / height;
+	camera_wv.aspect_ratio = aspect_ratio;
+	camera_sub.aspect_ratio = aspect_ratio;
 
 	ProjectionMatrix = glm::perspective(glm::radians(camera_wv.fovy), camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
@@ -487,7 +493,7 @@ int main(int argc, char *argv[])
 	char program_name[64] = "HW3_20120085";
 	char messages[N_MESSAGE_LINES][256] = {
 		"    - Keys used: 'f', l', 'd', 'w', 'o', 'ESC'",
-		"    - Mouse used: L-Click and move"};
+		"    - Mouse used: L-Click and move left/right"};
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
