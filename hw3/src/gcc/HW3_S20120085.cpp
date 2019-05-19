@@ -80,6 +80,11 @@ glm::vec3 direction_dragon;
 int flag_animation_dragon;
 int flag_dragon;
 
+// for teapot animation
+int flag_animation_teapot;
+GLfloat rotation_angle_teapot;
+GLfloat rotation_speed_teapot;
+
 // random number generators
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -106,6 +111,8 @@ void prepare_animation(void)
 	std::uniform_real_distribution<GLfloat> rotation_angle_dragon_random(0, 2.0f * M_PIf32);
 	rotation_angle_dragon = rotation_angle_dragon_random(gen);
 	direction_dragon = glm::normalize(glm::vec3(1.0f, glm::tan(rotation_angle_dragon), 0.0f));
+
+	rotation_speed_teapot = M_PIf32 / 3.0f;
 }
 
 void setPolygonMode(const int mode)
@@ -255,7 +262,7 @@ void draw_objects(void)
 	{
 		ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, teapot_state.pos);
 		ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(0.0f, 0.0f, 1.5f));
-		ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, teapot_state.angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, teapot_state.angle + rotation_angle_teapot, glm::vec3(0.0f, 0.0f, 1.0f));
 		ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_teapot();
@@ -263,7 +270,6 @@ void draw_objects(void)
 
 	// Draw Dragon
 	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_dragon);
-	//	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(0.0f, 0.0f, 1.5f));
 	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, rotation_angle_dragon, glm::vec3(0.0f, 0.0f, 1.0f));
 	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -371,6 +377,13 @@ void keyboard(unsigned char key, int x, int y)
 		initialize_world_camera();
 		glutPostRedisplay();
 		fprintf(stderr, "Reset World Cam.\n");
+		break;
+	case '/': // Toggle teapot spin
+		flag_animation_teapot = 1 - flag_animation_teapot;
+		if (!flag_animation_teapot)
+		{
+			rotation_angle_teapot = 0.0f;
+		}
 		break;
 	case ESC:
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
@@ -495,6 +508,12 @@ void timer_scene(int value)
 		{
 			position_tiger = position_tiger + speed_tiger * direction_tiger;
 		}
+	}
+
+	// Calculate rotation angle of teapot animation
+	if (flag_animation_teapot)
+	{
+		rotation_angle_teapot = normalizeAngle(rotation_angle_teapot + rotation_speed_teapot);
 	}
 	glutPostRedisplay();
 	if (flag_animation)
