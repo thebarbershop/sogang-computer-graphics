@@ -10,14 +10,6 @@
 
 #define EPSILON 0.00001f
 
-typedef struct
-{
-    glm::vec3 pos;
-    float angle;
-} sPathState;
-
-std::vector<sPathState> path_states;
-
 glm::vec3 getButterflyCurve(const float &theta)
 {
     // Butterfly Curve as described in https://en.wikipedia.org/wiki/Butterfly_curve_(transcendental)
@@ -91,23 +83,4 @@ GLfloat normalizeAngle(const GLfloat angle)
         return_angle = 0.0f;
     }
     return return_angle;
-}
-
-void initialize_path(void)
-{
-    int n_points = 720;
-    float del = 12.0f * 180 / n_points;
-    glm::vec3 prev_pos, next_pos;
-    path_states.push_back({glm::vec3(0.0f, 0.0f, 0.0f), 0.0f});
-    for (int i = 1; i < n_points; i++)
-    {
-        sPathState tmp_path_state;
-        prev_pos = path_states[i - 1].pos;
-        tmp_path_state.pos = next_pos;
-        next_pos = getButterflyCurve(del * i);
-
-        glm::vec3 direction = next_pos - prev_pos;
-        tmp_path_state.angle = std::atan2(direction.y, direction.x);
-        path_states.push_back(tmp_path_state);
-    }
 }

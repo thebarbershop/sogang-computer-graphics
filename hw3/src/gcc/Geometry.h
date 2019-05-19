@@ -11,6 +11,7 @@ const GLfloat aquamarine[3] = {0.498f, 1.000f, 0.831f};
 const GLfloat dark_turquoise[3] = {0.000f, 0.808f, 0.820f};
 const GLfloat light_steel_blue[3] = {0.690f, 0.769f, 0.871f};
 const GLfloat fire_brick[3] = {0xB2 / 256.0f, 0x22 / 256.0f, 0x22 / 256.0f};
+const GLfloat lavender[3] = {0xE6 / 256.0f, 0xE6 / 256.0f, 0xFA / 256.0f};
 } // namespace color
 
 // wheel numbers

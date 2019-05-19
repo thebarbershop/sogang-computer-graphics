@@ -34,6 +34,15 @@ glm::mat4 ModelMatrix_TIGER, ModelMatrix_TIGER_to_EYE;
 #define UINT_MAX UINT32_MAX
 #endif
 
+typedef struct
+{
+	glm::vec3 pos;
+	float angle;
+} ObjectState;
+
+std::vector<ObjectState> path_states;
+std::vector<ObjectState> teapot_states;
+
 void timer_scene(int);
 const unsigned char ESC = 27;
 unsigned int timestamp_scene; // the global clock in the scene
@@ -140,10 +149,10 @@ void draw_car_dummy(void)
 	}
 }
 
-void draw_box(void)
+void draw_teapot(void)
 {
-	glUniform3fv(loc_primitive_color, 1, color::fire_brick);
-	draw_geom_obj(GEOM_OBJ_ID_BOX);
+	glUniform3fv(loc_primitive_color, 1, color::lavender);
+	draw_geom_obj(GEOM_OBJ_ID_TEAPOT);
 }
 
 void draw_objects(void)
@@ -189,10 +198,9 @@ void draw_objects(void)
 	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(20.0f, 20.0f, 20.0f));
 	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_ironman();
+	//draw_ironman();
 
 	// Draw Bus
-	setPolygonMode(1);
 	for (auto &path_state : path_states)
 	{
 		ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, path_state.pos);
@@ -202,7 +210,17 @@ void draw_objects(void)
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_bus();
 	}
-	setPolygonMode(flag_polygon_mode);
+
+	// Draw Teapot
+	for (auto &teapot_state : teapot_states)
+	{
+		ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, teapot_state.pos);
+		ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(0.0f, 0.0f, 1.5f));
+		ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, teapot_state.angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_teapot();
+	}
 }
 
 /*********************************  START: callbacks *********************************/
@@ -498,6 +516,35 @@ void initialize_OpenGL(void)
 	ModelMatrix_CAR_NUT = glm::mat4(1.0f);
 }
 
+void initialize_object_states(void)
+{
+	ObjectState tmp_state;
+	// Initialize path states
+	int n_path_points = 240;
+	float del = 12.0f * 180 / n_path_points;
+	glm::vec3 prev_pos, next_pos;
+	path_states.push_back({glm::vec3(0.0f, 0.0f, 0.0f), 0.0f});
+	for (int i = 1; i < n_path_points; ++i)
+	{
+		prev_pos = path_states[i - 1].pos;
+		tmp_state.pos = next_pos;
+		next_pos = getButterflyCurve(del * i);
+
+		glm::vec3 direction = next_pos - prev_pos;
+		tmp_state.angle = std::atan2(direction.y, direction.x);
+		path_states.push_back(tmp_state);
+	}
+
+	// Initialize teapot states
+	for (int i = 0; i < 4; i++)
+	{
+		tmp_state.pos.x = ((i & 0b01) ? -1 : 1) * floor_size;
+		tmp_state.pos.y = ((i & 0b10) ? -1 : 1) * floor_size;
+		tmp_state.angle = std::atan2(-tmp_state.pos.y, -tmp_state.pos.x);
+		teapot_states.push_back(tmp_state);
+	}
+}
+
 void prepare_scene(void)
 {
 	prepare_animation();
@@ -512,7 +559,7 @@ void prepare_scene(void)
 	prepare_geom_obj(GEOM_OBJ_ID_COW, "Data/cow_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_TEAPOT, "Data/teapot_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_BOX, "Data/box_triangles_v.txt", GEOM_OBJ_TYPE_V);
-	initialize_path();
+	initialize_object_states();
 }
 
 void initialize_renderer(void)
