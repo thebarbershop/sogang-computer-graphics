@@ -32,10 +32,10 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #define UINT_MAX UINT32_MAX
 #endif
 const unsigned char ESC = 27;
-
 void timer_scene(int);
 unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
+int flag_polygon_mode;
 int flag_sub = 0;
 int flag_driver = 0;
 
@@ -47,20 +47,39 @@ float rotation_angle_wheel;
 glm::vec3 position_car;
 
 // for tiger animation
-const float speed_tiger = 4.0f;
-float rotation_angle_tiger = 0.0f;
+const float speed_tiger = 1.0f;
+GLfloat rotation_angle_tiger;
 glm::vec3 position_tiger;
+glm::vec3 goal_tiger;
+glm::vec3 direction_tiger;
+int flag_rotating_tiger;
+GLfloat rotating_speed_tiger;
 
-#define rad 1.7f
-#define ww 1.0f
-void draw_wheel_and_nut()
+void prepare_animation(void)
+{
+	position_tiger = glm::vec3(-0.45f * floor_size, -0.45f * floor_size, 0.0f);
+	goal_tiger = glm::vec3(0.45f * floor_size, -0.45f * floor_size, 0.0f);
+	direction_tiger = glm::normalize(goal_tiger - position_tiger);
+	rotation_angle_tiger = glm::atan(direction_tiger.y, direction_tiger.x);
+	rotating_speed_tiger = M_PIf32 / 6.0f;
+}
+
+void setPolygonMode(const int mode)
+{
+	GLenum GLmode = mode ? GL_FILL : GL_LINE;
+	glPolygonMode(polygonFace, GLmode);
+}
+
+const float rad = 1.7f;
+const float ww = 1.0f;
+void draw_wheel_and_nut(void)
 {
 	int i;
 
 	glUniform3fv(loc_primitive_color, 1, color::black);
 	draw_geom_obj(GEOM_OBJ_ID_CAR_WHEEL); // draw wheel
 
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < 5; ++i)
 	{
 		ModelMatrix_CAR_NUT = glm::rotate(ModelMatrix_CAR_WHEEL, glm::radians(72.0f) * i, glm::vec3(0.0f, 0.0f, 1.0f));
 		ModelMatrix_CAR_NUT = glm::translate(ModelMatrix_CAR_NUT, glm::vec3(rad - 0.5f, 0.0f, ww));
@@ -88,14 +107,14 @@ void draw_car_dummy(void)
 	glLineWidth(1.0f);
 
 	ModelMatrix_CAR_DRIVER = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.0f, 0.5f, 2.5f));
-	ModelMatrix_CAR_DRIVER = glm::rotate(ModelMatrix_CAR_DRIVER, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelMatrix_CAR_DRIVER = glm::rotate(ModelMatrix_CAR_DRIVER, M_PI_2f32, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_DRIVER;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	glLineWidth(5.0f);
 	draw_axes(); // draw camera frame at driver seat
 	glLineWidth(1.0f);
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; ++i)
 	{
 		ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, car_wheel_position[i]);
 		if (i == WHEEL_FRONT_LEFT)
@@ -126,7 +145,9 @@ void draw_objects(void)
 	ModelViewProjectionMatrix = ViewProjectionMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	glLineWidth(3.0f);
+	setPolygonMode(1);
 	draw_floor();
+	setPolygonMode(flag_polygon_mode);
 	glLineWidth(1.0f);
 
 	// Draw Axes
@@ -138,18 +159,17 @@ void draw_objects(void)
 
 	// Draw Car
 	ModelMatrix_CAR_BODY = glm::translate(glm::mat4(1.0f), position_car);
-	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 4.89f, 0.0f));
-	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
+	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, rotation_angle_car, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 0.0f, 4.89f));
+	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, -M_PIf32, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, M_PI_2f32, glm::vec3(1.0f, 0.0f, 0.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_car_dummy();
 
 	// Draw Tiger
 	ModelViewMatrix = glm::translate(ViewMatrix, position_tiger);
-	ModelViewMatrix = glm::rotate(ModelViewMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewMatrix = glm::rotate(ModelViewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelViewMatrix = glm::rotate(ModelViewMatrix, rotation_angle_tiger + M_PI_2f32, glm::vec3(0.0f, 0.0f, 1.0f));
 	ModelViewMatrix = glm::scale(ModelViewMatrix, glm::vec3(0.05f, 0.05f, 0.05f));
 	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -184,8 +204,8 @@ void display(void)
 	// Draw driver window
 	if (flag_driver)
 	{
-		glViewport(0, glutGet(GLUT_WINDOW_HEIGHT)*3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
-		glScissor(0, glutGet(GLUT_WINDOW_HEIGHT)*3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glViewport(0, glutGet(GLUT_WINDOW_HEIGHT) * 3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glScissor(0, glutGet(GLUT_WINDOW_HEIGHT) * 3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
 		glEnable(GL_SCISSOR_TEST);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -225,33 +245,11 @@ void keyboard(unsigned char key, int x, int y)
 		fprintf(stderr, "Animation mode %s.\n", flag_animation ? "ON" : "OFF");
 		break;
 	case 'F':
-	case 'f': // Fill polygon
-		polygonMode = 1;
-		setPolygonMode();
+	case 'f': // Toggle polygon fill mode
+		flag_polygon_mode = 1 - flag_polygon_mode;
+		setPolygonMode(flag_polygon_mode);
 		glutPostRedisplay();
-		fprintf(stderr, "Fill Polygon.\n");
-		break;
-	case 'L':
-	case 'l': // Draw only skeleton
-		polygonMode = 0;
-		setPolygonMode();
-		glutPostRedisplay();
-		fprintf(stderr, "Draw Only Lines.\n");
-		break;
-	case 'N':
-	case 'n': // Next frame
-		flag_animation = 0;
-		timer_scene(0);
-		glutPostRedisplay();
-		fprintf(stderr, "Next frame.\n");
-		break;
-	case 'P':
-	case 'p': // Previous frame
-		flag_animation = 0;
-		timestamp_scene -= 2;
-		timer_scene(0);
-		glutPostRedisplay();
-		fprintf(stderr, "Previous frame.\n");
+		fprintf(stderr, "Fill Polygon %s.\n", flag_polygon_mode ? "ON" : "OFF");
 		break;
 	case 'R':
 	case 'r': // Reset World Cam position
@@ -336,9 +334,9 @@ void timer_scene(int value)
 	position_car = next_position_car;
 	next_position_car = getButterflyCurve((timestamp_scene + 1) * speed_car);
 	glm::vec3 direction_vec_car = next_position_car - previous_position_car;
-	rotation_angle_car = std::atan2(direction_vec_car.x, direction_vec_car.z);
+	rotation_angle_car = std::atan2(direction_vec_car.y, direction_vec_car.x);
 	glm::vec3 circumcenter = getCircumcenter(previous_position_car, position_car, next_position_car);
-	int orientation = getOrientation(previous_position_car, position_car, next_position_car);
+	int orientation = -getOrientation(previous_position_car, position_car, next_position_car);
 	if (orientation == 0) // Car is going straight
 	{
 		steering_angle_wheel = glm::vec2(0.0f, 0.0f);
@@ -348,7 +346,7 @@ void timer_scene(int value)
 		steering_angle_wheel = 1.0f * orientation * getSteeringAngle(circumcenter);
 	}
 
-	// Rotate the wheel according to moved distance.
+	// Rotate the wheel according to moved distance. 1.7f is radius of wheel.
 	rotation_angle_wheel += glm::distance(previous_position_car, position_car) / 1.7f;
 	if (rotation_angle_wheel > 2 * M_PI)
 	{
@@ -356,13 +354,47 @@ void timer_scene(int value)
 	}
 
 	// Calculate position and frame of tiger
-	//static float previous_vec_tan_tiger;
+	static GLfloat direction_angle_tiger;
+	static GLfloat cw_ccw_tiger = 1.0f; // if -1, counter clockwise turn; if 1, clockwise turn
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
-	//position_tiger = getHeartCurve(timestamp_scene * speed_tiger);
-	//glm::vec3 direction_vec_tiger = getHeartCurve((timestamp_scene + 1) * speed_tiger) - position_tiger;
-	//float atan2 = std::atan2(direction_vec_tiger.x, direction_vec_tiger.z);
-	//rotation_angle_tiger = 0.5f * (atan2 + previous_vec_tan_tiger);
-	//previous_vec_tan_tiger = atan2;
+	if (flag_rotating_tiger)
+	{
+		if (rotation_angle_tiger - direction_angle_tiger < rotating_speed_tiger + EPSILON)
+		{
+			flag_rotating_tiger = 0;
+			rotation_angle_tiger = direction_angle_tiger;
+		}
+		else
+		{
+			rotation_angle_tiger = normalizeAngle(rotation_angle_tiger + cw_ccw_tiger * rotating_speed_tiger);
+
+			if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, EPSILON))
+			{
+				flag_rotating_tiger = 0;
+				rotation_angle_tiger = direction_angle_tiger;
+			}
+		}
+	}
+	else
+	{
+		if (glm::distance(position_tiger, goal_tiger) < speed_tiger)
+		{
+			position_tiger = goal_tiger;
+			glm::vec4 tmp_vec(goal_tiger, 1.0f);
+			tmp_vec = glm::rotate(glm::mat4(1.0f), M_PI_2f32, glm::vec3(0.0f, 0.0f, 1.0f)) * tmp_vec;
+			goal_tiger.x = tmp_vec.x;
+			goal_tiger.y = tmp_vec.y;
+			goal_tiger.z = tmp_vec.z;
+			direction_tiger = glm::normalize(goal_tiger - position_tiger);
+			direction_angle_tiger = normalizeAngle(glm::atan(direction_tiger.y, direction_tiger.x)); // angle between [0, 2*PI)
+			cw_ccw_tiger = (normalizeAngle(direction_angle_tiger - rotation_angle_tiger) > M_PIf32 + EPSILON) ? -1 : 1;
+			flag_rotating_tiger = 1;
+		}
+		else
+		{
+			position_tiger = position_tiger + speed_tiger * direction_tiger;
+		}
+	}
 
 	glutPostRedisplay();
 	if (flag_animation)
@@ -372,7 +404,6 @@ void timer_scene(int value)
 void cleanup(void)
 {
 	free_axes();
-	free_path();
 	free_floor();
 	free_tiger();
 
@@ -414,7 +445,7 @@ void prepare_shader_program(void)
 
 void initialize_OpenGL(void)
 {
-	setPolygonMode();
+	setPolygonMode(0);
 	glEnable(GL_DEPTH_TEST);
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -430,8 +461,8 @@ void initialize_OpenGL(void)
 
 void prepare_scene(void)
 {
+	prepare_animation();
 	prepare_axes();
-	prepare_path();
 	prepare_floor();
 	prepare_tiger();
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
@@ -480,11 +511,9 @@ void greetings(const char *program_name, char messages[][256], int n_message_lin
 	fprintf(stdout, "**************************************************************\n\n");
 	fprintf(stdout, "  PROGRAM NAME: %s\n\n", program_name);
 
-	for (int i = 0; i < n_message_lines; i++)
+	for (int i = 0; i < n_message_lines; ++i)
 		fprintf(stdout, "%s\n", messages[i]);
 	fprintf(stdout, "\n**************************************************************\n\n");
-
-	initialize_glew();
 }
 
 #define N_MESSAGE_LINES 2
@@ -503,6 +532,7 @@ int main(int argc, char *argv[])
 	glutCreateWindow(program_name);
 
 	greetings(program_name, messages, N_MESSAGE_LINES);
+	initialize_glew();
 	initialize_renderer();
 
 	glutMainLoop();

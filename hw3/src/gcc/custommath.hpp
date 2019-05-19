@@ -7,7 +7,7 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/vector_query.hpp>
 
-#define EPSILON 0.0001f
+#define EPSILON 0.00001f
 
 glm::vec3 getButterflyCurve(const float &theta)
 {
@@ -17,9 +17,9 @@ glm::vec3 getButterflyCurve(const float &theta)
     float sin_t = std::sin(t), sin_t_over_12 = std::sin(t / 12.0f);
     float cos_t = std::cos(t), cos_4t = std::cos(4 * t);
     float term = std::exp(cos_t) - 2 * cos_4t - std::pow(sin_t_over_12, 5);
-    pos.x = 10 * sin_t * term;
-    pos.y = 0.0f;
-    pos.z = 10 * cos_t * term;
+    pos.x = 10.0f * sin_t * term;
+    pos.y = 10.0f * cos_t * term;
+    pos.z = 0.0f;
 
     return pos;
 }
@@ -63,5 +63,23 @@ int getOrientation(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c)
     {
         return 0;
     }
-    return ((b.z - a.z) * (c.x - b.x) - (b.x - a.x) * (c.z - b.z) < 0) ? -1 : 1;
+    return ((b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y) < 0) ? -1 : 1;
+}
+
+GLfloat normalizeAngle(const GLfloat angle)
+{
+    GLfloat return_angle = angle;
+    while (return_angle < 0.0f)
+    {
+        return_angle += 2 * M_PIf32;
+    }
+    while (return_angle > 2 * M_PIf32)
+    {
+        return_angle -= 2 * M_PIf32;
+    }
+    if (glm::epsilonEqual(return_angle, 2 * M_PIf32, EPSILON) || glm::epsilonEqual(return_angle, 0.0f, EPSILON))
+    {
+        return_angle = 0.0f;
+    }
+    return return_angle;
 }

@@ -1,5 +1,4 @@
 GLenum polygonFace = GL_FRONT_AND_BACK;
-int polygonMode = 0;
 
 namespace color
 {
@@ -30,12 +29,6 @@ GLuint axes_VBO, axes_VAO;
 GLfloat axes_vertices[6][3] = {
 	{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 GLfloat axes_color[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
-
-void setPolygonMode()
-{
-	GLenum GLmode = polygonMode ? GL_FILL : GL_LINE;
-	glPolygonMode(polygonFace, GLmode);
-}
 
 void prepare_axes(void)
 { // Draw coordinate axes.
@@ -119,36 +112,6 @@ int read_path_file(GLfloat **object, const char *filename)
 	return n_vertices;
 }
 
-void prepare_path(void)
-{ // Draw path.
-	//	return;
-	path_n_vertices = read_path_file(&path_vertices, "Data/path.txt");
-	// Initialize vertex array object.
-	glGenVertexArrays(1, &path_VAO);
-	glBindVertexArray(path_VAO);
-	glGenBuffers(1, &path_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, path_VBO);
-	glBufferData(GL_ARRAY_BUFFER, path_n_vertices * 3 * sizeof(float), path_vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(LOC_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-}
-
-void draw_path(void)
-{
-	glBindVertexArray(path_VAO);
-	glUniform3f(loc_primitive_color, 1.000f, 1.000f, 0.000f); // color name: Yellow
-	glDrawArrays(GL_LINE_STRIP, 0, path_n_vertices);
-}
-
-void free_path(void)
-{
-	glDeleteVertexArrays(1, &path_VAO);
-	glDeleteBuffers(1, &path_VBO);
-}
-
 #define N_GEOMETRY_OBJECTS 6
 #define GEOM_OBJ_ID_CAR_BODY 0
 #define GEOM_OBJ_ID_CAR_WHEEL 1
@@ -203,7 +166,7 @@ int read_geometry_file(GLfloat **object, const char *filename, GEOM_OBJ_TYPE geo
 	flt_ptr = *object;
 	for (i = 0; i < 3 * n_triangles * GEOM_OBJ_ELEMENTS_PER_VERTEX[geom_obj_type]; ++i)
 	{
-		if (!fscanf(fp, "%f", ++flt_ptr))
+		if (!fscanf(fp, "%f", flt_ptr++))
 		{
 			fprintf(stderr, "Cannot read value %d from %s\n", i, filename);
 			return -1;
@@ -263,7 +226,7 @@ void free_geom_obj(int geom_obj_ID)
 const GLfloat floor_size = 50.0f;
 GLuint floor_VBO, floor_VAO;
 const GLfloat floor_vertices[4][3] = {
-	{floor_size, 0.0f, floor_size}, {-floor_size, 0.0f, floor_size}, {-floor_size, 0.0f, -floor_size}, {floor_size, 0.0f, -floor_size}};
+	{floor_size, floor_size, 0.0f}, {-floor_size, floor_size, 0.0f}, {-floor_size, -floor_size, 0.0f}, {floor_size, -floor_size, 0.0f}};
 const GLfloat *floor_color = color::forest_green;
 const GLfloat *grid_color = color::black;
 const int n_grid = 8;
@@ -277,20 +240,20 @@ void prepare_floor(void)
 	for (int i = 0; i < (n_grid + 1); ++i)
 	{
 		grid_vertices[i][0][0] = -floor_size + grid_width * (GLfloat)(i * 2);
-		grid_vertices[i][0][1] = 0.0f;
-		grid_vertices[i][0][2] = floor_size;
+		grid_vertices[i][0][1] = floor_size;
+		grid_vertices[i][0][2] = 0.0f;
 		grid_vertices[i][1][0] = -floor_size + grid_width * (GLfloat)(i * 2);
-		grid_vertices[i][1][1] = 0.0f;
-		grid_vertices[i][1][2] = -floor_size;
+		grid_vertices[i][1][1] = -floor_size;
+		grid_vertices[i][1][2] = 0.0f;
 	}
 	for (int i = n_grid + 1; i < 2 * (n_grid + 1); ++i)
 	{
 		grid_vertices[i][0][0] = floor_size;
-		grid_vertices[i][0][1] = 0.0f;
-		grid_vertices[i][0][2] = -floor_size + grid_width * (GLfloat)((i - n_grid - 1) * 2);
+		grid_vertices[i][0][1] = -floor_size + grid_width * (GLfloat)((i - n_grid - 1) * 2);
+		grid_vertices[i][0][2] = 0.0f;
 		grid_vertices[i][1][0] = -floor_size;
-		grid_vertices[i][1][1] = 0.0f;
-		grid_vertices[i][1][2] = -floor_size + grid_width * (GLfloat)((i - n_grid - 1) * 2);
+		grid_vertices[i][1][1] = -floor_size + grid_width * (GLfloat)((i - n_grid - 1) * 2);
+		grid_vertices[i][1][2] = 0.0f;
 	}
 
 	GLsizeiptr buffer_size = sizeof(floor_vertices) + sizeof(grid_vertices);
@@ -317,10 +280,6 @@ void prepare_floor(void)
 
 void draw_floor(void)
 {
-	int orig_polygonMode = polygonMode;
-	polygonMode = 1;
-	setPolygonMode();
-
 	unsigned int current_size = 0;
 
 	glBindVertexArray(floor_VAO);
@@ -335,8 +294,6 @@ void draw_floor(void)
 	current_size += 2 * (n_grid + 1);
 
 	glBindVertexArray(0);
-	polygonMode = orig_polygonMode;
-	setPolygonMode();
 }
 
 void free_floor(void)
