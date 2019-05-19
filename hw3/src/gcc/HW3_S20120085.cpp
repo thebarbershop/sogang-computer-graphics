@@ -11,8 +11,6 @@
 GLuint h_ShaderProgram;									  // handle to shader program
 GLint loc_ModelViewProjectionMatrix, loc_primitive_color; // indices of uniform variables
 
-// #include glm/*.hpp only if necessary
-// #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> //translate, rotate, scale, lookAt, perspective, etc.
 #include <glm/gtc/matrix_inverse.hpp>   //inverse, affineInverse, etc.
 glm::mat4 ModelViewProjectionMatrix;
@@ -62,11 +60,14 @@ glm::vec3 position_car;
 // for tiger animation
 const float speed_tiger = 3.0f;
 GLfloat rotation_angle_tiger;
+GLfloat rotation_speed_tiger;
 glm::vec3 position_tiger;
 glm::vec3 goal_tiger;
 glm::vec3 direction_tiger;
 int flag_rotating_tiger;
-GLfloat rotating_speed_tiger;
+
+glm::vec3 position_ironman;
+GLfloat rotation_angle_ironman;
 
 void prepare_animation(void)
 {
@@ -74,7 +75,10 @@ void prepare_animation(void)
 	goal_tiger = glm::vec3(0.8f * floor_size, -0.8f * floor_size, 0.0f);
 	direction_tiger = glm::normalize(goal_tiger - position_tiger);
 	rotation_angle_tiger = glm::atan(direction_tiger.y, direction_tiger.x);
-	rotating_speed_tiger = M_PIf32 / 6.0f;
+	rotation_speed_tiger = M_PIf32 / 6.0f;
+
+	position_ironman = glm::vec3(0.5 * floor_size, 0.5 * floor_size, 0.0f);
+	rotation_angle_ironman = glm::atan(position_ironman.y, position_ironman.x);
 }
 
 void setPolygonMode(const int mode)
@@ -195,10 +199,11 @@ void draw_objects(void)
 	draw_tiger();
 
 	// Draw Ironman
-	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(20.0f, 20.0f, 20.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
+	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_ironman+glm::vec3(0.0f, 0.0f, 0.5f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, rotation_angle_ironman, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	//draw_ironman();
+	draw_ironman();
 
 	// Draw Bus
 	for (auto &path_state : path_states)
@@ -412,7 +417,6 @@ void timer_scene(int value)
 	{
 		steering_angle_wheel = 1.0f * orientation * getSteeringAngle(circumcenter);
 	}
-
 	// Rotate the wheel according to moved distance. 1.7f is radius of wheel.
 	rotation_angle_wheel += glm::distance(previous_position_car, position_car) / 1.7f;
 	rotation_angle_wheel = normalizeAngle(rotation_angle_wheel);
@@ -423,8 +427,8 @@ void timer_scene(int value)
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
 	if (flag_rotating_tiger)
 	{
-		rotation_angle_tiger = normalizeAngle(rotation_angle_tiger + cw_ccw_tiger * rotating_speed_tiger);
-		if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, rotating_speed_tiger))
+		rotation_angle_tiger = normalizeAngle(rotation_angle_tiger + cw_ccw_tiger * rotation_speed_tiger);
+		if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, rotation_speed_tiger))
 		{
 			flag_rotating_tiger = 0;
 			rotation_angle_tiger = direction_angle_tiger;
@@ -450,7 +454,6 @@ void timer_scene(int value)
 			position_tiger = position_tiger + speed_tiger * direction_tiger;
 		}
 	}
-
 	glutPostRedisplay();
 	if (flag_animation)
 		glutTimerFunc(100, timer_scene, 0);
@@ -462,6 +465,7 @@ void cleanup(void)
 	free_floor();
 	free_tiger();
 	free_ironman();
+	free_ben();
 	free_bus();
 
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
@@ -552,6 +556,7 @@ void prepare_scene(void)
 	prepare_floor();
 	prepare_tiger();
 	prepare_ironman();
+	prepare_ben();
 	prepare_bus();
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);
