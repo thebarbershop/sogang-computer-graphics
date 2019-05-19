@@ -41,8 +41,6 @@ unsigned int timestamp_scene = 0; // the global clock in the scene
 int flag_animation = 1;
 int flag_subwindow = 0;
 
-const float SPHERE_COEFF = 0.1f;
-
 // for car animation
 const float speed_car = 1.0f;
 float rotation_angle_car;
@@ -170,7 +168,7 @@ void display(void)
 	glEnable(GL_SCISSOR_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	(camera_type != CAMERA_DRIVER) ? set_ViewProjectionMatrix_for_world_viewer()
+	(camera_type != CAMERA_DRIVER) ? set_ViewProjectionMatrix(camera_wv)
 								   : set_ViewProjectionMatrix_for_driver();
 	draw_objects();
 
@@ -182,7 +180,7 @@ void display(void)
 		glEnable(GL_SCISSOR_TEST);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		set_ViewProjectionMatrix_for_sub();
+		set_ViewProjectionMatrix(camera_sub);
 		draw_objects();
 	}
 	glutSwapBuffers();
@@ -190,6 +188,12 @@ void display(void)
 
 void keyboard(unsigned char key, int x, int y)
 {
+	if (flag_subwindow && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
+	{
+		manipulate_sub_camera(key);
+		return;
+	}
+
 	switch (key)
 	{
 	case '1': // Toggle sub window
@@ -250,7 +254,7 @@ void keyboard(unsigned char key, int x, int y)
 	case 'W':
 	case 'w': // World cam
 		camera_type = CAMERA_WORLD_VIEWER;
-		set_ViewProjectionMatrix_for_world_viewer();
+		set_ViewProjectionMatrix(camera_wv);
 		glutPostRedisplay();
 		fprintf(stderr, "World Cam.\n");
 		break;
@@ -262,45 +266,15 @@ void keyboard(unsigned char key, int x, int y)
 
 void special(int key, int x, int y)
 {
-	glm::vec4 tpos;
-	GLfloat fy = camera_wv.pos.y;
-	int flag = 1;
-	if (camera_type != CAMERA_WORLD_VIEWER)
+	if (camera_type == CAMERA_WORLD_VIEWER && !(glutGetModifiers() & GLUT_ACTIVE_CTRL))
 	{
-		return;
-	}
-	tpos = glm::vec4(camera_wv.pos.x, camera_wv.pos.y, camera_wv.pos.z, 1.0f);
-	switch (key)
-	{
-	case GLUT_KEY_UP:
-		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(-tpos.z, 0.0f, tpos.x)) * tpos;
-		flag = tpos.y > fy; // Camera must move higher
-		fprintf(stderr, "UP key.\n");
-		break;
-	case GLUT_KEY_DOWN:
-		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(tpos.z, 0.0f, -tpos.x)) * tpos;
-		flag = (tpos.y < fy) && (tpos.y > 0.0f); // Camera must move lower but should not go underground
-		fprintf(stderr, "DOWN key.\n");
-		break;
-	case GLUT_KEY_LEFT:
-		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(0.0f, -1.0f, 0.0f)) * tpos;
-		fprintf(stderr, "LEFT key.\n");
-		break;
-	case GLUT_KEY_RIGHT:
-		tpos = glm::rotate(glm::mat4(1.0f), SPHERE_COEFF, glm::vec3(0.0f, 1.0f, 0.0f)) * tpos;
-		fprintf(stderr, "RIGHT key.\n");
-		break;
-	}
-	if (flag)
-	{
-		camera_wv.pos.y = tpos.y;
-		camera_wv.pos.x = tpos.x;
-		camera_wv.pos.z = tpos.z;
+		manipulate_world_camera(key);
 	}
 
-	ViewMatrix = glm::lookAt(camera_wv.pos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	set_axes_from_ViewMatrix(camera_wv);
-	set_ViewProjectionMatrix_for_world_viewer();
+	if (flag_subwindow && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
+	{
+		manipulate_sub_camera(key);
+	}
 	glutPostRedisplay();
 }
 
@@ -314,7 +288,7 @@ void motion(int x, int y)
 
 	renew_cam_wv_fovy(prevx - x);
 	prevx = x;
-	set_ViewProjectionMatrix_for_world_viewer();
+	set_ViewProjectionMatrix(camera_wv);
 
 	glutPostRedisplay();
 }
