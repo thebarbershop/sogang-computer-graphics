@@ -165,20 +165,18 @@ void draw_objects(void)
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
-	if (camera_type == CAMERA_DRIVER)
-	{
-		set_ViewProjectionMatrix_for_driver();
-	}
-	else
-	{
-		set_ViewProjectionMatrix_for_world_viewer();
-	}
 
+	// Draw main window
+	glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
+	(camera_type != CAMERA_DRIVER) ? set_ViewProjectionMatrix_for_world_viewer()
+								   : set_ViewProjectionMatrix_for_driver();
 	draw_objects();
+
+	glClear(GL_DEPTH_BUFFER_BIT);
+	// Draw sub window
 	if (flag_subwindow)
 	{
-		glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 6, glutGet(GLUT_WINDOW_HEIGHT) / 6);
+		glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
 		set_ViewProjectionMatrix_for_sub();
 		draw_objects();
 	}
@@ -191,7 +189,7 @@ void keyboard(unsigned char key, int x, int y)
 	{
 	case '1': // Toggle sub window
 		flag_subwindow = 1 - flag_subwindow;
-		fprintf(stderr, "Turn %s sub window\n", flag_subwindow ? "on" : "off");
+		fprintf(stderr, "Sub window %s\n", flag_subwindow ? "ON" : "OFF");
 		glutPostRedisplay();
 		break;
 	case 'A':
@@ -200,10 +198,8 @@ void keyboard(unsigned char key, int x, int y)
 		if (flag_animation)
 		{
 			glutTimerFunc(100, timer_scene, 0);
-			fprintf(stderr, "Animation mode ON.\n");
 		}
-		else
-			fprintf(stderr, "Animation mode OFF.\n");
+		fprintf(stderr, "Animation mode %s.\n", flag_animation ? "ON" : "OFF");
 		break;
 	case 'D':
 	case 'd': // Driver cam
