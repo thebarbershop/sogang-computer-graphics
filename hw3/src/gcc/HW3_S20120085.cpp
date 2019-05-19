@@ -22,6 +22,8 @@ glm::mat4 ModelViewMatrix;
 glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER;
 glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_camera()
 
+glm::mat4 ModelMatrix_TIGER, ModelMatrix_TIGER_to_EYE;
+
 #include "custommath.hpp"
 #include "Camera.h"
 #include "Geometry.h"
@@ -31,13 +33,15 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #ifndef UINT_MAX
 #define UINT_MAX UINT32_MAX
 #endif
-const unsigned char ESC = 27;
+
 void timer_scene(int);
-unsigned int timestamp_scene = 0; // the global clock in the scene
+const unsigned char ESC = 27;
+unsigned int timestamp_scene; // the global clock in the scene
 int flag_animation = 1;
 int flag_polygon_mode;
-int flag_sub = 0;
-int flag_driver = 0;
+int flag_sub;
+int flag_driver;
+int flag_eye;
 
 // for car animation
 const float speed_car = 1.0f;
@@ -47,7 +51,7 @@ float rotation_angle_wheel;
 glm::vec3 position_car;
 
 // for tiger animation
-const float speed_tiger = 1.0f;
+const float speed_tiger = 3.0f;
 GLfloat rotation_angle_tiger;
 glm::vec3 position_tiger;
 glm::vec3 goal_tiger;
@@ -57,8 +61,8 @@ GLfloat rotating_speed_tiger;
 
 void prepare_animation(void)
 {
-	position_tiger = glm::vec3(-0.45f * floor_size, -0.45f * floor_size, 0.0f);
-	goal_tiger = glm::vec3(0.45f * floor_size, -0.45f * floor_size, 0.0f);
+	position_tiger = glm::vec3(-0.8 * floor_size, -0.8 * floor_size, 0.0f);
+	goal_tiger = glm::vec3(0.8f * floor_size, -0.8f * floor_size, 0.0f);
 	direction_tiger = glm::normalize(goal_tiger - position_tiger);
 	rotation_angle_tiger = glm::atan(direction_tiger.y, direction_tiger.x);
 	rotating_speed_tiger = M_PIf32 / 6.0f;
@@ -168,10 +172,10 @@ void draw_objects(void)
 	draw_car_dummy();
 
 	// Draw Tiger
-	ModelViewMatrix = glm::translate(ViewMatrix, position_tiger);
-	ModelViewMatrix = glm::rotate(ModelViewMatrix, rotation_angle_tiger + M_PI_2f32, glm::vec3(0.0f, 0.0f, 1.0f));
-	ModelViewMatrix = glm::scale(ModelViewMatrix, glm::vec3(0.05f, 0.05f, 0.05f));
-	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
+	ModelMatrix_TIGER = glm::translate(glm::mat4(1.0f), position_tiger);
+	ModelMatrix_TIGER = glm::rotate(ModelMatrix_TIGER, rotation_angle_tiger + M_PI_2f32, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelMatrix_TIGER = glm::scale(ModelMatrix_TIGER, glm::vec3(0.05f, 0.05f, 0.05f));
+	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_TIGER;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	draw_tiger();
 }
@@ -184,18 +188,21 @@ void display(void)
 	glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 	glScissor(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 	glEnable(GL_SCISSOR_TEST);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	set_ViewProjectionMatrix(camera_wv);
 	draw_objects();
 
+	int quarter_width = glutGet(GLUT_WINDOW_WIDTH) / 4;
+	int quarter_height = glutGet(GLUT_WINDOW_HEIGHT) / 4;
 	// Draw sub window
 	if (flag_sub)
 	{
-		glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
-		glScissor(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glViewport(0, 0, quarter_width, quarter_height);
+		glScissor(0, 0, quarter_width, quarter_height);
 		glEnable(GL_SCISSOR_TEST);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		set_ViewProjectionMatrix(camera_sub);
 		draw_objects();
@@ -204,14 +211,27 @@ void display(void)
 	// Draw driver window
 	if (flag_driver)
 	{
-		glViewport(0, glutGet(GLUT_WINDOW_HEIGHT) * 3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
-		glScissor(0, glutGet(GLUT_WINDOW_HEIGHT) * 3 / 4, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glViewport(0, 3 * quarter_height, quarter_width, quarter_height);
+		glScissor(0, 3 * quarter_height, quarter_width, quarter_height);
 		glEnable(GL_SCISSOR_TEST);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		set_ViewProjectionMatrix_for_driver();
 		draw_objects();
 	}
+
+	// Draw eye window
+	if (flag_eye)
+	{
+		glViewport(3 * quarter_width, 3 * quarter_height, quarter_width, quarter_height);
+		glScissor(3 * quarter_width, 3 * quarter_height, quarter_width, quarter_height);
+		glEnable(GL_SCISSOR_TEST);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		set_ViewProjectionMatrix_for_eye();
+		draw_objects();
+	}
+
 	glutSwapBuffers();
 }
 
@@ -230,9 +250,14 @@ void keyboard(unsigned char key, int x, int y)
 		fprintf(stderr, "Sub camera %s\n", flag_sub ? "ON" : "OFF");
 		glutPostRedisplay();
 		break;
-	case '2': // Driver cam
+	case '2': // Toggle driver cam
 		flag_driver = 1 - flag_driver;
 		fprintf(stderr, "Driver camera %s.\n", flag_driver ? "ON" : "OFF");
+		glutPostRedisplay();
+		break;
+	case '3': // Toggle eye cam
+		flag_eye = 1 - flag_eye;
+		fprintf(stderr, "Eye camera %s.\n", flag_eye ? "ON" : "OFF");
 		glutPostRedisplay();
 		break;
 	case 'A':
@@ -348,10 +373,7 @@ void timer_scene(int value)
 
 	// Rotate the wheel according to moved distance. 1.7f is radius of wheel.
 	rotation_angle_wheel += glm::distance(previous_position_car, position_car) / 1.7f;
-	if (rotation_angle_wheel > 2 * M_PI)
-	{
-		rotation_angle_wheel -= 2 * M_PI;
-	}
+	rotation_angle_wheel = normalizeAngle(rotation_angle_wheel);
 
 	// Calculate position and frame of tiger
 	static GLfloat direction_angle_tiger;
@@ -359,20 +381,11 @@ void timer_scene(int value)
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
 	if (flag_rotating_tiger)
 	{
-		if (rotation_angle_tiger - direction_angle_tiger < rotating_speed_tiger + EPSILON)
+		rotation_angle_tiger = normalizeAngle(rotation_angle_tiger + cw_ccw_tiger * rotating_speed_tiger);
+		if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, rotating_speed_tiger))
 		{
 			flag_rotating_tiger = 0;
 			rotation_angle_tiger = direction_angle_tiger;
-		}
-		else
-		{
-			rotation_angle_tiger = normalizeAngle(rotation_angle_tiger + cw_ccw_tiger * rotating_speed_tiger);
-
-			if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, EPSILON))
-			{
-				flag_rotating_tiger = 0;
-				rotation_angle_tiger = direction_angle_tiger;
-			}
 		}
 	}
 	else

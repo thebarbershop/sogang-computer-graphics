@@ -38,13 +38,19 @@ void set_ViewProjectionMatrix(const Camera &camera)
 	ProjectionMatrix = glm::perspective(glm::radians(camera.fovy), camera.aspect_ratio, camera.near_c, camera.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
+
 void set_ViewProjectionMatrix_for_driver(void)
 {
-	glm::mat4 Matrix_CAMERA_driver_inverse;
-
-	Matrix_CAMERA_driver_inverse = ModelMatrix_CAR_BODY * ModelMatrix_CAR_BODY_to_DRIVER;
-
+	glm::mat4 Matrix_CAMERA_driver_inverse = ModelMatrix_CAR_BODY * ModelMatrix_CAR_BODY_to_DRIVER;
 	ViewMatrix = glm::affineInverse(Matrix_CAMERA_driver_inverse);
+	ProjectionMatrix = glm::perspective(glm::radians(30.0f), camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+}
+
+void set_ViewProjectionMatrix_for_eye(void)
+{
+	glm::mat4 Matrix_CAMERA_EYE_inverse = ModelMatrix_TIGER * ModelMatrix_TIGER_to_EYE;
+	ViewMatrix = glm::affineInverse(Matrix_CAMERA_EYE_inverse);
 	ProjectionMatrix = glm::perspective(glm::radians(30.0f), camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
@@ -92,6 +98,12 @@ void initialize_camera(void)
 	ModelMatrix_CAR_BODY_to_DRIVER = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.5f, 2.5f));
 	ModelMatrix_CAR_BODY_to_DRIVER = glm::rotate(ModelMatrix_CAR_BODY_to_DRIVER,
 												 M_PI_2f32, glm::vec3(0.0f, 1.0f, 0.0f));
+
+	ModelMatrix_TIGER_to_EYE = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -88.0f, 62.0f));
+	ModelMatrix_TIGER_to_EYE = glm::rotate(ModelMatrix_TIGER_to_EYE,
+										   -M_PI_2f32, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelMatrix_TIGER_to_EYE = glm::rotate(ModelMatrix_TIGER_to_EYE,
+										   M_PIf32, glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
 void renew_camera_fovy(Camera &camera, const float del)
