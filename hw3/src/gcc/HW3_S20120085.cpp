@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <cfloat>
+#include <random>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
@@ -44,7 +45,7 @@ std::vector<ObjectState> teapot_states;
 void timer_scene(int);
 const unsigned char ESC = 27;
 unsigned int timestamp_scene; // the global clock in the scene
-int flag_animation = 1;
+int flag_animation;
 int flag_polygon_mode;
 int flag_sub;
 int flag_driver;
@@ -66,11 +67,27 @@ glm::vec3 goal_tiger;
 glm::vec3 direction_tiger;
 int flag_rotating_tiger;
 
+// for ironman placement
 glm::vec3 position_ironman;
 GLfloat rotation_angle_ironman;
 
+// for dragon animation
+const float speed_dragon = 5.0f;
+GLfloat rotation_angle_dragon;
+GLfloat goal_distance_dragon;
+glm::vec3 position_dragon;
+glm::vec3 direction_dragon;
+int flag_animation_dragon;
+int flag_dragon;
+
+// random number generators
+std::random_device rd;
+std::mt19937 gen(rd());
+
 void prepare_animation(void)
 {
+	flag_animation = 1;
+
 	position_tiger = glm::vec3(-0.8 * floor_size, -0.8 * floor_size, 0.0f);
 	goal_tiger = glm::vec3(0.8f * floor_size, -0.8f * floor_size, 0.0f);
 	direction_tiger = glm::normalize(goal_tiger - position_tiger);
@@ -79,6 +96,16 @@ void prepare_animation(void)
 
 	position_ironman = glm::vec3(0.5 * floor_size, 0.5 * floor_size, 0.0f);
 	rotation_angle_ironman = glm::atan(position_ironman.y, position_ironman.x);
+
+	flag_dragon = 1;
+	std::uniform_real_distribution<GLfloat> position_dragon_random(-0.6f * floor_size, 0.6f * floor_size);
+	position_dragon.x = position_dragon_random(gen);
+	position_dragon.y = position_dragon_random(gen);
+	std::uniform_real_distribution<GLfloat> goal_distance_dragon_random(20.0f * floor_size, 30.0f * floor_size);
+	goal_distance_dragon = goal_distance_dragon_random(gen);
+	std::uniform_real_distribution<GLfloat> rotation_angle_dragon_random(0, 2.0f * M_PIf32);
+	rotation_angle_dragon = rotation_angle_dragon_random(gen);
+	direction_dragon = glm::normalize(glm::vec3(1.0f, glm::tan(rotation_angle_dragon), 0.0f));
 }
 
 void setPolygonMode(const int mode)
@@ -233,6 +260,14 @@ void draw_objects(void)
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_teapot();
 	}
+
+	// Draw Dragon
+	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_dragon);
+	//	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(0.0f, 0.0f, 1.5f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, rotation_angle_dragon, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_dragon();
 }
 
 /*********************************  START: callbacks *********************************/
@@ -435,7 +470,7 @@ void timer_scene(int value)
 	if (flag_rotating_tiger)
 	{
 		rotation_angle_tiger = normalizeAngle(rotation_angle_tiger + cw_ccw_tiger * rotation_speed_tiger);
-		if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, rotation_speed_tiger))
+		if (glm::epsilonEqual(direction_angle_tiger, rotation_angle_tiger, rotation_speed_tiger - EPSILON))
 		{
 			flag_rotating_tiger = 0;
 			rotation_angle_tiger = direction_angle_tiger;
@@ -473,6 +508,7 @@ void cleanup(void)
 	free_tiger();
 	free_ironman();
 	free_spider();
+	free_dragon();
 	free_bus();
 
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
@@ -564,6 +600,7 @@ void prepare_scene(void)
 	prepare_tiger();
 	prepare_ironman();
 	prepare_spider();
+	prepare_dragon();
 	prepare_bus();
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);

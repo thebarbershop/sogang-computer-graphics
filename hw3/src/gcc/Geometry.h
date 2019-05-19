@@ -14,6 +14,7 @@ const GLfloat fire_brick[3] = {0xB2 / 256.0f, 0x22 / 256.0f, 0x22 / 256.0f};
 const GLfloat lavender[3] = {0xE6 / 256.0f, 0xE6 / 256.0f, 0xFA / 256.0f};
 const GLfloat tan[3] = {0xD2 / 256.0f, 0xB4 / 256.0f, 0x8C / 256.0f};
 const GLfloat rosy_brown[3] = {0xBC / 256.0f, 0x8F / 256.0f, 0x8F / 256.0f};
+const GLfloat gold[3] = {0xFF / 256.0f, 0xD7 / 256.0f, 0x00 / 256.0f};
 } // namespace color
 
 // wheel numbers
@@ -608,6 +609,66 @@ void free_spider(void)
 {
 	glDeleteVertexArrays(1, &spider_VAO);
 	glDeleteBuffers(1, &spider_VBO);
+}
+
+// dragon object
+GLuint dragon_VBO, dragon_VAO;
+int dragon_n_triangles;
+GLfloat *dragon_vertices;
+const GLfloat *dragon_color = color::gold;
+
+void prepare_dragon(void)
+{
+	int n_bytes_per_vertex, n_bytes_per_triangle, dragon_n_total_triangles = 0;
+	char filename[512];
+
+	n_bytes_per_vertex = 8 * sizeof(float); // 3 for vertex, 3 for normal, and 2 for texcoord
+	n_bytes_per_triangle = 3 * n_bytes_per_vertex;
+
+	sprintf(filename, "Data/static_objects/dragon_vnt.geom");
+	dragon_n_triangles = read_geometry(&dragon_vertices, n_bytes_per_triangle, filename);
+	// assume all geometry files are effective
+	dragon_n_total_triangles += dragon_n_triangles;
+
+	// initialize vertex buffer object
+	glGenBuffers(1, &dragon_VBO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, dragon_VBO);
+	glBufferData(GL_ARRAY_BUFFER, dragon_n_total_triangles * 3 * n_bytes_per_vertex, dragon_vertices, GL_STATIC_DRAW);
+
+	// as the geometry data exists now in graphics memory, ...
+	free(dragon_vertices);
+
+	// initialize vertex array object
+	glGenVertexArrays(1, &dragon_VAO);
+	glBindVertexArray(dragon_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, dragon_VBO);
+	glVertexAttribPointer(LOC_VERTEX, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(0));
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(LOC_NORMAL, 3, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(LOC_TEXCOORD, 2, GL_FLOAT, GL_FALSE, n_bytes_per_vertex, BUFFER_OFFSET(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_dragon(void)
+{
+	glFrontFace(GL_CW);
+
+	glBindVertexArray(dragon_VAO);
+	glUniform3fv(loc_primitive_color, 1, dragon_color);
+	glDrawArrays(GL_TRIANGLES, 0, 3 * dragon_n_triangles);
+	glBindVertexArray(0);
+}
+
+void free_dragon(void)
+{
+	glDeleteVertexArrays(1, &dragon_VAO);
+	glDeleteBuffers(1, &dragon_VBO);
 }
 
 /* END Custom Code */
