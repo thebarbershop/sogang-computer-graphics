@@ -78,7 +78,7 @@ void initialize_world_camera(void)
 
 void initialize_sub_camera(void)
 {
-	ViewMatrix = glm::lookAt(glm::vec3(0.0f, 100.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ViewMatrix = glm::lookAt(glm::vec3(0.0f, 200.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	set_axes_from_ViewMatrix(camera_sub);
 

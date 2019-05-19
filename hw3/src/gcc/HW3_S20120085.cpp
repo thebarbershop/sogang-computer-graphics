@@ -164,19 +164,24 @@ void draw_objects(void)
 
 void display(void)
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	// Draw main window
 	glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
+	glScissor(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
+	glEnable(GL_SCISSOR_TEST);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	(camera_type != CAMERA_DRIVER) ? set_ViewProjectionMatrix_for_world_viewer()
 								   : set_ViewProjectionMatrix_for_driver();
 	draw_objects();
 
-	glClear(GL_DEPTH_BUFFER_BIT);
 	// Draw sub window
 	if (flag_subwindow)
 	{
 		glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glScissor(0, 0, glutGet(GLUT_WINDOW_WIDTH) / 4, glutGet(GLUT_WINDOW_HEIGHT) / 4);
+		glEnable(GL_SCISSOR_TEST);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		set_ViewProjectionMatrix_for_sub();
 		draw_objects();
 	}
@@ -291,7 +296,6 @@ void special(int key, int x, int y)
 		camera_wv.pos.y = tpos.y;
 		camera_wv.pos.x = tpos.x;
 		camera_wv.pos.z = tpos.z;
-		fprintf(stderr, "%f %f %f\n", camera_wv.pos.y, camera_wv.pos.x, camera_wv.pos.z);
 	}
 
 	ViewMatrix = glm::lookAt(camera_wv.pos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
