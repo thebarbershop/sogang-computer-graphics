@@ -1,9 +1,6 @@
 GLenum polygonFace = GL_FRONT_AND_BACK;
 int polygonMode = 0;
 
-#define TO_RADIAN 0.01745329252f
-#define TO_DEGREE 57.295779513f
-
 namespace color
 {
 const GLfloat black[3] = {0.0f, 0.0f, 0.0f};

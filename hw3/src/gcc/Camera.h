@@ -8,6 +8,8 @@ typedef struct _Camera
 
 	float fovy, aspect_ratio, near_c, far_c;
 	int move;
+
+	float FOVY_COEFF, MANIPULATE_COEFF, ROTATION_COEFF;
 } Camera;
 
 Camera camera_wv;
@@ -18,17 +20,6 @@ enum _CameraType
 	CAMERA_WORLD_VIEWER,
 	CAMERA_DRIVER
 } camera_type;
-
-const float WORLD_CAM_FOVY_COEFF = 0.05f;
-const float WORLD_CAM_MANIPULATE_COEFF = 0.1f;
-const float SUB_CAM_MANIPULATE_COEFF = 2.0f;
-const float SUB_CAM_ROTATION_COEFF = 0.01f;
-
-const int CTRL_Z = 26;
-const int CTRL_X = 24;
-const int CTRL_C = 3;
-const int CTRL_V = 22;
-const int CTRL_R = 18;
 
 void set_axes_from_ViewMatrix(Camera &camera)
 {
@@ -50,7 +41,7 @@ void set_ViewMatrix(const Camera &camera)
 void set_ViewProjectionMatrix(const Camera &camera)
 {
 	set_ViewMatrix(camera);
-	ProjectionMatrix = glm::perspective(TO_RADIAN * camera.fovy, camera.aspect_ratio, camera.near_c, camera.far_c);
+	ProjectionMatrix = glm::perspective(glm::radians(camera.fovy), camera.aspect_ratio, camera.near_c, camera.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 void set_ViewProjectionMatrix_for_driver(void)
@@ -60,7 +51,7 @@ void set_ViewProjectionMatrix_for_driver(void)
 	Matrix_CAMERA_driver_inverse = ModelMatrix_CAR_BODY * ModelMatrix_CAR_BODY_to_DRIVER;
 
 	ViewMatrix = glm::affineInverse(Matrix_CAMERA_driver_inverse);
-	ProjectionMatrix = glm::perspective(TO_RADIAN * 30.0f, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
+	ProjectionMatrix = glm::perspective(glm::radians(30.0f), camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 
@@ -76,6 +67,9 @@ void initialize_world_camera(void)
 	camera_wv.aspect_ratio = (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT);
 	camera_wv.near_c = 5.0f;
 	camera_wv.far_c = 10000.0f;
+
+	camera_wv.FOVY_COEFF = 0.05f;
+	camera_wv.MANIPULATE_COEFF = 0.1f;
 }
 
 void initialize_sub_camera(void)
@@ -89,6 +83,10 @@ void initialize_sub_camera(void)
 	camera_sub.aspect_ratio = (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT);
 	camera_sub.near_c = 5.0f;
 	camera_sub.far_c = 10000.0f;
+
+	camera_sub.FOVY_COEFF = 0.05f;
+	camera_sub.MANIPULATE_COEFF = 2.0f;
+	camera_sub.ROTATION_COEFF = 0.01f;
 }
 
 void initialize_camera(void)
@@ -100,13 +98,13 @@ void initialize_camera(void)
 	// the transformation that moves the driver's camera frame from car body's MC to driver seat
 	ModelMatrix_CAR_BODY_to_DRIVER = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.5f, 2.5f));
 	ModelMatrix_CAR_BODY_to_DRIVER = glm::rotate(ModelMatrix_CAR_BODY_to_DRIVER,
-												 TO_RADIAN * 90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+												 glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-void renew_cam_wv_fovy(const float del)
+void renew_camera_fovy(Camera &camera, const float del)
 {
-	camera_wv.fovy = std::max(camera_wv.fovy + del * WORLD_CAM_FOVY_COEFF, EPSILON);
-	camera_wv.fovy = std::min(camera_wv.fovy, 180.0f);
+	camera.fovy = std::max(camera.fovy + del * camera.FOVY_COEFF, EPSILON);
+	camera.fovy = std::min(camera.fovy, 180.0f);
 }
 
 void manipulate_world_camera(int key)
@@ -119,21 +117,21 @@ void manipulate_world_camera(int key)
 	switch (key)
 	{
 	case GLUT_KEY_UP:
-		tpos = glm::rotate(glm::mat4(1.0f), WORLD_CAM_MANIPULATE_COEFF, glm::vec3(-tpos.z, 0.0f, tpos.x)) * tpos;
+		tpos = glm::rotate(glm::mat4(1.0f), camera_wv.MANIPULATE_COEFF, glm::vec3(-tpos.z, 0.0f, tpos.x)) * tpos;
 		flag = tpos.y > fy; // Camera must move higher
 		fprintf(stderr, "World camera climbing up.\n");
 		break;
 	case GLUT_KEY_DOWN:
-		tpos = glm::rotate(glm::mat4(1.0f), WORLD_CAM_MANIPULATE_COEFF, glm::vec3(tpos.z, 0.0f, -tpos.x)) * tpos;
+		tpos = glm::rotate(glm::mat4(1.0f), camera_wv.MANIPULATE_COEFF, glm::vec3(tpos.z, 0.0f, -tpos.x)) * tpos;
 		flag = (tpos.y < fy) && (tpos.y > 0.0f); // Camera must move lower but should not go underground
 		fprintf(stderr, "World camera climbing down.\n");
 		break;
 	case GLUT_KEY_LEFT:
-		tpos = glm::rotate(glm::mat4(1.0f), WORLD_CAM_MANIPULATE_COEFF, glm::vec3(0.0f, -1.0f, 0.0f)) * tpos;
+		tpos = glm::rotate(glm::mat4(1.0f), camera_wv.MANIPULATE_COEFF, glm::vec3(0.0f, -1.0f, 0.0f)) * tpos;
 		fprintf(stderr, "World camera rotating left.\n");
 		break;
 	case GLUT_KEY_RIGHT:
-		tpos = glm::rotate(glm::mat4(1.0f), WORLD_CAM_MANIPULATE_COEFF, glm::vec3(0.0f, 1.0f, 0.0f)) * tpos;
+		tpos = glm::rotate(glm::mat4(1.0f), camera_wv.MANIPULATE_COEFF, glm::vec3(0.0f, 1.0f, 0.0f)) * tpos;
 		fprintf(stderr, "World camera rotating right.\n");
 		break;
 	default:
@@ -159,43 +157,51 @@ void manipulate_sub_camera(int key)
 	switch (key)
 	{
 	case GLUT_KEY_UP:
-		tpos = glm::translate(glm::mat4(1.0f), camera_sub.vaxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
+		tpos = glm::translate(glm::mat4(1.0f), camera_sub.vaxis * camera_sub.MANIPULATE_COEFF) * tpos;
 		fprintf(stderr, "Sub camera moving forward.\n");
 		break;
 	case GLUT_KEY_DOWN:
-		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.vaxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
+		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.vaxis * camera_sub.MANIPULATE_COEFF) * tpos;
 		flag = (tpos.y > EPSILON);
 		fprintf(stderr, "Sub camera moving backward.\n");
 		break;
 	case GLUT_KEY_LEFT:
-		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.uaxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
+		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.uaxis * camera_sub.MANIPULATE_COEFF) * tpos;
 		fprintf(stderr, "Sub camera moving left.\n");
 		break;
 	case GLUT_KEY_RIGHT:
-		tpos = glm::translate(glm::mat4(1.0f), camera_sub.uaxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
+		tpos = glm::translate(glm::mat4(1.0f), camera_sub.uaxis * camera_sub.MANIPULATE_COEFF) * tpos;
 		fprintf(stderr, "Sub camera moving right.\n");
 		break;
-	case CTRL_Z:
-		tpos = glm::translate(glm::mat4(1.0f), camera_sub.naxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
+	case 'z':
+		tpos = glm::translate(glm::mat4(1.0f), camera_sub.naxis * camera_sub.MANIPULATE_COEFF) * tpos;
 		fprintf(stderr, "Sub camera moving up.\n");
 		break;
-	case CTRL_X:
-		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.naxis * SUB_CAM_MANIPULATE_COEFF) * tpos;
+	case 'x':
+		tpos = glm::translate(glm::mat4(1.0f), -camera_sub.naxis * camera_sub.MANIPULATE_COEFF) * tpos;
 		fprintf(stderr, "Sub camera moving down.\n");
 		break;
-	case CTRL_C:
+	case 'c':
 		set_ViewMatrix(camera_sub);
-		ViewMatrix = glm::rotate(ViewMatrix, SUB_CAM_ROTATION_COEFF, camera_sub.vaxis);
+		ViewMatrix = glm::rotate(ViewMatrix, camera_sub.ROTATION_COEFF, camera_sub.vaxis);
 		set_axes_from_ViewMatrix(camera_sub);
 		fprintf(stderr, "Sub camera rotating counter-clockwise.\n");
 		break;
-	case CTRL_V:
+	case 'v':
 		set_ViewMatrix(camera_sub);
-		ViewMatrix = glm::rotate(ViewMatrix, -SUB_CAM_ROTATION_COEFF, camera_sub.vaxis);
+		ViewMatrix = glm::rotate(ViewMatrix, -camera_sub.ROTATION_COEFF, camera_sub.vaxis);
 		set_axes_from_ViewMatrix(camera_sub);
 		fprintf(stderr, "Sub camera rotating clockwise.\n");
 		break;
-	case CTRL_R:
+	case 'a':
+		renew_camera_fovy(camera_sub, -1.0f);
+		fprintf(stderr, "Sub camera zoom in.\n");
+		break;
+	case 's':
+		renew_camera_fovy(camera_sub, 1.0f);
+		fprintf(stderr, "Sub camera zoom out.\n");
+		break;
+	case 'r':
 		initialize_sub_camera();
 		fprintf(stderr, "Sub camera position reset\n");
 		return;

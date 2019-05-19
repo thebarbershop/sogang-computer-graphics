@@ -1,8 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#define TO_RADIAN 0.01745329252f
-#define TO_DEGREE 57.295779513f
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -64,7 +61,7 @@ void draw_wheel_and_nut()
 
 	for (i = 0; i < 5; i++)
 	{
-		ModelMatrix_CAR_NUT = glm::rotate(ModelMatrix_CAR_WHEEL, TO_RADIAN * 72.0f * i, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix_CAR_NUT = glm::rotate(ModelMatrix_CAR_WHEEL, glm::radians(72.0f) * i, glm::vec3(0.0f, 0.0f, 1.0f));
 		ModelMatrix_CAR_NUT = glm::translate(ModelMatrix_CAR_NUT, glm::vec3(rad - 0.5f, 0.0f, ww));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_NUT;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -90,7 +87,7 @@ void draw_car_dummy(void)
 	glLineWidth(1.0f);
 
 	ModelMatrix_CAR_DRIVER = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.0f, 0.5f, 2.5f));
-	ModelMatrix_CAR_DRIVER = glm::rotate(ModelMatrix_CAR_DRIVER, TO_RADIAN * 90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelMatrix_CAR_DRIVER = glm::rotate(ModelMatrix_CAR_DRIVER, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_DRIVER;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	glLineWidth(5.0f);
@@ -142,7 +139,7 @@ void draw_objects(void)
 	ModelMatrix_CAR_BODY = glm::translate(glm::mat4(1.0f), position_car);
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(0.0f, 4.89f, 0.0f));
-	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -151,7 +148,7 @@ void draw_objects(void)
 	// Draw Tiger
 	ModelViewMatrix = glm::translate(ViewMatrix, position_tiger);
 	ModelViewMatrix = glm::rotate(ModelViewMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewMatrix = glm::rotate(ModelViewMatrix, -90.0f * TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelViewMatrix = glm::rotate(ModelViewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	ModelViewMatrix = glm::scale(ModelViewMatrix, glm::vec3(0.05f, 0.05f, 0.05f));
 	ModelViewProjectionMatrix = ProjectionMatrix * ModelViewMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -190,7 +187,7 @@ void keyboard(unsigned char key, int x, int y)
 {
 	if (flag_subwindow && (glutGetModifiers() & GLUT_ACTIVE_CTRL))
 	{
-		manipulate_sub_camera(key);
+		manipulate_sub_camera(key + 'a' - 1);
 		return;
 	}
 
@@ -286,7 +283,7 @@ void motion(int x, int y)
 	if (!camera_wv.move || (camera_type != CAMERA_WORLD_VIEWER) || !is_shift_down)
 		return;
 
-	renew_cam_wv_fovy(prevx - x);
+	renew_camera_fovy(camera_wv, prevx - x);
 	prevx = x;
 	set_ViewProjectionMatrix(camera_wv);
 
@@ -316,16 +313,8 @@ void reshape(int width, int height)
 	glViewport(0, 0, width, height);
 	camera_wv.aspect_ratio = (float)width / height;
 
-	ProjectionMatrix = glm::perspective(TO_RADIAN * camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
+	ProjectionMatrix = glm::perspective(glm::radians(camera_wv.fovy), camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-	//	glutPostRedisplay();
-
-	// // sub window
-	// glViewport(0, 0, width / 6, height / 6);
-	// camera_sub.aspect_ratio = (float)width / height;
-
-	// ProjectionMatrix_sub = glm::perspective(TO_RADIAN * camera_sub.fovy, camera_sub.aspect_ratio, camera_sub.near_c, camera_sub.far_c);
-	// ViewProjectionMatrix_sub = ProjectionMatrix_sub * ViewMatrix_sub;
 	glutPostRedisplay();
 }
 
