@@ -117,13 +117,11 @@ int read_path_file(GLfloat **object, const char *filename)
 	return n_vertices;
 }
 
-#define N_GEOMETRY_OBJECTS 6
+#define N_GEOMETRY_OBJECTS 4
 #define GEOM_OBJ_ID_CAR_BODY 0
 #define GEOM_OBJ_ID_CAR_WHEEL 1
 #define GEOM_OBJ_ID_CAR_NUT 2
-#define GEOM_OBJ_ID_COW 3
-#define GEOM_OBJ_ID_TEAPOT 4
-#define GEOM_OBJ_ID_BOX 5
+#define GEOM_OBJ_ID_TEAPOT 3
 
 GLuint geom_obj_VBO[N_GEOMETRY_OBJECTS];
 GLuint geom_obj_VAO[N_GEOMETRY_OBJECTS];

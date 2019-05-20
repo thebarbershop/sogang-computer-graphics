@@ -626,9 +626,7 @@ void cleanup(void)
 	free_geom_obj(GEOM_OBJ_ID_CAR_WHEEL);
 	free_geom_obj(GEOM_OBJ_ID_CAR_NUT);
 	free_geom_obj(GEOM_OBJ_ID_CAR_BODY);
-	free_geom_obj(GEOM_OBJ_ID_COW);
 	free_geom_obj(GEOM_OBJ_ID_TEAPOT);
-	free_geom_obj(GEOM_OBJ_ID_BOX);
 }
 
 /*********************************  END: callbacks *********************************/
@@ -716,9 +714,7 @@ void prepare_scene(void)
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_NUT, "Data/car_nut_triangles_v.txt", GEOM_OBJ_TYPE_V);
-	prepare_geom_obj(GEOM_OBJ_ID_COW, "Data/cow_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_TEAPOT, "Data/teapot_triangles_v.txt", GEOM_OBJ_TYPE_V);
-	prepare_geom_obj(GEOM_OBJ_ID_BOX, "Data/box_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	initialize_object_states();
 }
 
