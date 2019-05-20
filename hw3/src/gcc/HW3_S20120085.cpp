@@ -45,7 +45,6 @@ std::vector<ObjectState> teapot_states;
 void timer_scene(int);
 const unsigned char ESC = 27;
 unsigned int timestamp_scene; // the global clock in the scene
-int flag_animation;
 int flag_polygon_mode;
 int flag_sub;
 int flag_driver;
@@ -72,13 +71,17 @@ glm::vec3 position_ironman;
 GLfloat rotation_angle_ironman;
 
 // for dragon animation
-const float speed_dragon = 5.0f;
+const int speed_dragon = 5;
 GLfloat rotation_angle_dragon;
-GLfloat goal_distance_dragon;
+int goal_distance_dragon;
 glm::vec3 position_dragon;
 glm::vec3 direction_dragon;
 int flag_animation_dragon;
-int flag_dragon;
+int flag_display_dragon;
+int flag_stack_dragon;
+GLfloat target_height_dragon;
+const GLfloat d_target_height_dragon = 0.2f;
+const GLfloat HEIGHT_DRAGON_MAX = 10.0f;
 
 // for teapot animation
 int flag_animation_teapot;
@@ -99,10 +102,22 @@ int flag_stack_spider;
 std::random_device rd;
 std::mt19937 gen(rd());
 
+void initialize_dragon(void)
+{
+	flag_display_dragon = 1;
+	std::uniform_real_distribution<GLfloat> position_dragon_random(-0.6f * floor_size, 0.6f * floor_size);
+	position_dragon.x = position_dragon_random(gen);
+	position_dragon.y = position_dragon_random(gen);
+	std::uniform_int_distribution<int> goal_distance_dragon_random(2 * floor_size, 3 * floor_size);
+	goal_distance_dragon = goal_distance_dragon_random(gen);
+	direction_dragon.x = position_dragon_random(gen);
+	direction_dragon.y = position_dragon_random(gen);
+	direction_dragon = glm::normalize(direction_dragon);
+	rotation_angle_dragon = glm::atan(direction_dragon.y, direction_dragon.x);
+}
+
 void prepare_animation(void)
 {
-	flag_animation = 1;
-
 	position_tiger = glm::vec3(-0.8 * floor_size, -0.8 * floor_size, 0.0f);
 	goal_tiger = glm::vec3(0.8f * floor_size, -0.8f * floor_size, 0.0f);
 	direction_tiger = glm::normalize(goal_tiger - position_tiger);
@@ -112,17 +127,9 @@ void prepare_animation(void)
 	position_ironman = glm::vec3(0.5 * floor_size, 0.5 * floor_size, 0.0f);
 	rotation_angle_ironman = glm::atan(position_ironman.y, position_ironman.x);
 
-	flag_dragon = 1;
-	std::uniform_real_distribution<GLfloat> position_dragon_random(-0.6f * floor_size, 0.6f * floor_size);
-	position_dragon.x = position_dragon_random(gen);
-	position_dragon.y = position_dragon_random(gen);
-	std::uniform_real_distribution<GLfloat> goal_distance_dragon_random(20.0f * floor_size, 30.0f * floor_size);
-	goal_distance_dragon = goal_distance_dragon_random(gen);
-	std::uniform_real_distribution<GLfloat> rotation_angle_dragon_random(0, 2.0f * M_PIf32);
-	rotation_angle_dragon = rotation_angle_dragon_random(gen);
-	direction_dragon = glm::normalize(glm::vec3(1.0f, glm::tan(rotation_angle_dragon), 0.0f));
-
 	rotation_speed_teapot = M_PIf32 / 3.0f;
+
+	initialize_dragon();
 }
 
 void setPolygonMode(const int mode)
@@ -279,11 +286,14 @@ void draw_objects(void)
 	}
 
 	// Draw Dragon
-	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_dragon);
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, rotation_angle_dragon, glm::vec3(0.0f, 0.0f, 1.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_dragon();
+	if (flag_display_dragon)
+	{
+		ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, position_dragon);
+		ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, rotation_angle_dragon, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_dragon();
+	}
 }
 
 /*********************************  START: callbacks *********************************/
@@ -366,15 +376,6 @@ void keyboard(unsigned char key, int x, int y)
 		fprintf(stderr, "Eye camera %s.\n", flag_eye ? "ON" : "OFF");
 		glutPostRedisplay();
 		break;
-	case 'A':
-	case 'a': // toggle the animation effect.
-		flag_animation = 1 - flag_animation;
-		if (flag_animation)
-		{
-			glutTimerFunc(100, timer_scene, 0);
-		}
-		fprintf(stderr, "Animation mode %s.\n", flag_animation ? "ON" : "OFF");
-		break;
 	case 'F':
 	case 'f': // Toggle polygon fill mode
 		flag_polygon_mode = 1 - flag_polygon_mode;
@@ -393,6 +394,15 @@ void keyboard(unsigned char key, int x, int y)
 		if (!flag_animation_teapot)
 		{
 			rotation_angle_teapot = 0.0f;
+		}
+		fprintf(stderr, "Teapot spin %s.\n", flag_animation_teapot ? "ON" : "OFF");
+		break;
+	case '.': // Regen dragon
+		if (!flag_display_dragon)
+		{
+			initialize_dragon();
+			glutPostRedisplay();
+			fprintf(stderr, "The Dragon has reappeared.\n");
 		}
 		break;
 	case ESC:
@@ -415,7 +425,7 @@ void special(int key, int x, int y)
 	glutPostRedisplay();
 }
 
-int is_shift_down;
+int is_shift_down, is_ctrl_down;
 int prevx;
 
 void motion(int x, int y)
@@ -437,16 +447,25 @@ void mouse(int button, int state, int x, int y)
 		if (state == GLUT_DOWN)
 		{
 			is_shift_down = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
-			if (is_shift_down)
+			is_ctrl_down = glutGetModifiers() & GLUT_ACTIVE_CTRL;
+			if (is_shift_down && !is_ctrl_down)
 			{
 				camera_wv.move = 1;
 				prevx = x;
 			}
-			else
+			else if (!is_shift_down && !is_ctrl_down)
 			{
 				if (!flag_animation_spider)
 				{
 					flag_stack_spider = 1;
+				}
+			}
+
+			else if (is_ctrl_down && !is_shift_down)
+			{
+				if (!flag_animation_dragon && flag_display_dragon)
+				{
+					flag_stack_dragon = 1;
 				}
 			}
 		}
@@ -456,7 +475,15 @@ void mouse(int button, int state, int x, int y)
 			{
 				flag_stack_spider = 0;
 				flag_animation_spider = 1;
+				fprintf(stderr, "The Spider jumps.\n");
 			}
+			if (flag_stack_dragon)
+			{
+				fprintf(stderr, "The Dragon is flying away.\n");
+				flag_stack_dragon = 0;
+				flag_animation_dragon = 1;
+			}
+
 			camera_wv.move = 0;
 		}
 	}
@@ -536,15 +563,16 @@ void timer_scene(int value)
 	}
 
 	// Calculate rotation angle of teapot animation
-	if (flag_stack_spider)
-	{
-		accel_spider = std::min(accel_spider + d_accel_spider, ACCEL_SPIDER_MAX);
-	}
 	if (flag_animation_teapot)
 	{
 		rotation_angle_teapot = normalizeAngle(rotation_angle_teapot + rotation_speed_teapot);
 	}
 
+	// Calculate spider animation
+	if (flag_stack_spider)
+	{
+		accel_spider = std::min(accel_spider + d_accel_spider, ACCEL_SPIDER_MAX);
+	}
 	if (flag_animation_spider)
 	{
 		speed_spider += accel_spider;
@@ -556,11 +584,32 @@ void timer_scene(int value)
 			accel_spider = 0.0f;
 			speed_spider = 0.0f;
 			flag_animation_spider = 0;
+			fprintf(stderr, "The Spider is back on the car.\n");
+		}
+	}
+
+	// Calculate dragon animatin
+	static int t_dragon = 0;
+	if (flag_stack_dragon)
+	{
+		target_height_dragon = std::min(target_height_dragon + d_target_height_dragon, HEIGHT_DRAGON_MAX);
+	}
+	if (flag_animation_dragon)
+	{
+		t_dragon += speed_dragon;
+		position_dragon = position_dragon + (float)t_dragon * direction_dragon;
+		position_dragon.z += target_height_dragon / (speed_dragon);
+		if (t_dragon >= goal_distance_dragon)
+		{
+			target_height_dragon = 0.0f;
+			t_dragon = 0;
+			flag_animation_dragon = 0;
+			flag_display_dragon = 0;
+			fprintf(stderr, "The Dragon disappeared.\n");
 		}
 	}
 	glutPostRedisplay();
-	if (flag_animation)
-		glutTimerFunc(100, timer_scene, 0);
+	glutTimerFunc(100, timer_scene, 0);
 }
 
 void cleanup(void)
@@ -706,23 +755,16 @@ void print_message(const char *m)
 	fprintf(stdout, "%s\n\n", m);
 }
 
-void greetings(const char *program_name, char messages[][256], int n_message_lines)
+void greetings(const char *program_name)
 {
 	fprintf(stdout, "**************************************************************\n\n");
-	fprintf(stdout, "  PROGRAM NAME: %s\n\n", program_name);
-
-	for (int i = 0; i < n_message_lines; ++i)
-		fprintf(stdout, "%s\n", messages[i]);
-	fprintf(stdout, "\n**************************************************************\n\n");
+	fprintf(stdout, "  PROGRAM NAME: %s\n", program_name);
+	fprintf(stdout, "**************************************************************\n\n");
 }
 
-#define N_MESSAGE_LINES 2
 int main(int argc, char *argv[])
 {
 	char program_name[64] = "HW3_20120085";
-	char messages[N_MESSAGE_LINES][256] = {
-		"    - Keys used: 'f', l', 'd', 'w', 'o', 'ESC'",
-		"    - Mouse used: L-Click and move left/right"};
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
@@ -731,7 +773,7 @@ int main(int argc, char *argv[])
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutCreateWindow(program_name);
 
-	greetings(program_name, messages, N_MESSAGE_LINES);
+	greetings(program_name);
 	initialize_glew();
 	initialize_renderer();
 
