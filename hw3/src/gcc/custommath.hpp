@@ -1,5 +1,3 @@
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include <cmath>
 #include <cfloat>
 #include <vector>
@@ -7,8 +5,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/vector_query.hpp>
+#include <glm/gtc/epsilon.hpp>
 
 #define EPSILON 0.00001f
+#ifndef M_PI_2f32
+#define M_PI_2f32 1.5707963267948966f
+#endif
+#ifndef M_PIf32
+#define M_PIf32 3.14159265358979323f
+#endif
 
 glm::vec3 getButterflyCurve(const float &theta)
 {
