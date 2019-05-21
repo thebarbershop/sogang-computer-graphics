@@ -7,11 +7,12 @@
 #include <random>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
-
 #include "Shaders/LoadShaders.h"
 GLuint h_ShaderProgram;									  // handle to shader program
 GLint loc_ModelViewProjectionMatrix, loc_primitive_color; // indices of uniform variables
 
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp> //translate, rotate, scale, lookAt, perspective, etc.
 #include <glm/gtc/matrix_inverse.hpp>   //inverse, affineInverse, etc.
 glm::mat4 ModelViewProjectionMatrix;
@@ -45,7 +46,7 @@ std::vector<ObjectState> teapot_states;
 void timer_scene(int);
 const unsigned char ESC = 27;
 unsigned int timestamp_scene; // the global clock in the scene
-int flag_polygon_mode;
+int flag_polygon_mode=1;
 int flag_sub;
 int flag_driver;
 int flag_eye;
@@ -108,7 +109,7 @@ void initialize_dragon(void)
 	std::uniform_real_distribution<GLfloat> position_dragon_random(-0.6f * floor_size, 0.6f * floor_size);
 	position_dragon.x = position_dragon_random(gen);
 	position_dragon.y = position_dragon_random(gen);
-	std::uniform_int_distribution<int> goal_distance_dragon_random(2 * floor_size, 3 * floor_size);
+	std::uniform_int_distribution<int> goal_distance_dragon_random((int)(2 * floor_size), int(3 * floor_size));
 	goal_distance_dragon = goal_distance_dragon_random(gen);
 	direction_dragon.x = position_dragon_random(gen);
 	direction_dragon.y = position_dragon_random(gen);
@@ -219,9 +220,6 @@ void draw_teapot(void)
 
 void draw_objects(void)
 {
-	glm::mat4 ModelMatrix_big_cow, ModelMatrix_small_cow;
-	glm::mat4 ModelMatrix_big_box, ModelMatrix_small_box;
-
 	// Draw Grid Floor
 	ModelViewProjectionMatrix = ViewProjectionMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
@@ -433,7 +431,7 @@ void motion(int x, int y)
 	if (!camera_wv.move || !is_shift_down)
 		return;
 
-	renew_camera_fovy(camera_wv, prevx - x);
+	renew_camera_fovy(camera_wv, (float)(prevx - x));
 	prevx = x;
 	set_ViewProjectionMatrix(camera_wv);
 
@@ -553,7 +551,7 @@ void timer_scene(int value)
 			goal_tiger.z = tmp_vec.z;
 			direction_tiger = glm::normalize(goal_tiger - position_tiger);
 			direction_angle_tiger = normalizeAngle(glm::atan(direction_tiger.y, direction_tiger.x)); // angle between [0, 2*PI)
-			cw_ccw_tiger = (normalizeAngle(direction_angle_tiger - rotation_angle_tiger) > M_PIf32 + EPSILON) ? -1 : 1;
+			cw_ccw_tiger = (normalizeAngle(direction_angle_tiger - rotation_angle_tiger) > M_PIf32 + EPSILON) ? -1.0f : 1.0f;
 			flag_rotating_tiger = 1;
 		}
 		else
@@ -678,7 +676,7 @@ void initialize_object_states(void)
 	// Initialize path states
 	int n_path_points = 240;
 	float del = 12.0f * 180 / n_path_points;
-	glm::vec3 prev_pos, next_pos;
+	glm::vec3 prev_pos, next_pos(0.0f, 0.0f, 0.0f);
 	path_states.push_back({glm::vec3(0.0f, 0.0f, 0.0f), 0.0f});
 	for (int i = 1; i < n_path_points; ++i)
 	{
@@ -760,7 +758,7 @@ void greetings(const char *program_name)
 
 int main(int argc, char *argv[])
 {
-	char program_name[64] = "HW3_20120085";
+	char program_name[64] = "HW3_S120085";
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
