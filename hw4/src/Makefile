@@ -1,14 +1,17 @@
-FILENAME = hw4
-PREAMBLE = $(FILENAME)-preamble
-SRC = $(FILENAME).tex
+FILENAME = HW4_S120085
+SRC = $(FILENAME).md
 OUTPUT = $(FILENAME).pdf
-AUX = $(FILENAME).aux $(FILENAME).log $(PREAMBLE).aux $(PREAMBLE).fdb_latexmk $(PREAMBLE).fls $(PREAMBLE).log
 
-.PHONY: hw4 clean
+.PHONY: docs clean
 
-hw4: 
-	xelatex $(SRC) \
+docs: $(SRC)
+	pandoc $(SRC) --latex-engine=xelatex \
+	-V mainfont="NanumGothic" \
+	-V monofont="NanumMyeongjo" \
+	-V papersize="a4" \
+	-V margin=0.5in \
+	-o $(OUTPUT)&& \
 	code $(OUTPUT)
 
 clean:
-	rm $(OUTPUT) $(AUX)
+	rm $(OUTPUT)
