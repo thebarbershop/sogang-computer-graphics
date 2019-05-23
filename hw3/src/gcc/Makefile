@@ -1,16 +1,16 @@
 CC = g++
 
+NAME = HW3_S120085
 CFLAGS = -Wall -Werror -O3
-
-OBJS = HW3_S20120085.o LoadShaders.o
+OBJS = $(NAME).o LoadShaders.o
 
 .PHONY: clean run $(OBJS)
 
 run : $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) -lglut -lGLU -lGL -lGLEW -lm
 
-HW3_S20120085.o : HW3_S20120085.cpp
-	$(CC) $(CFLAGS) -c HW3_S20120085.cpp
+$(NAME).o : $(NAME).cpp
+	$(CC) $(CFLAGS) -c $(NAME).cpp
 
 LoadShaders.o : Shaders/LoadShaders.cpp
 	$(CC) $(CFLAGS) -c Shaders/LoadShaders.cpp
