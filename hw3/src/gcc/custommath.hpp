@@ -3,6 +3,7 @@
 #include <vector>
 #include <glm/vec3.hpp>
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/vector_query.hpp>
 #include <glm/gtc/epsilon.hpp>
