@@ -2,4 +2,39 @@
 **/.vscode
 **/run
 **/sample
-!hw3
+hw5/HLSLShader_Tiger(fin)
+**/Debug
+**/Logs
+**/Temp
+
+# =============== #
+# Unity generated #
+# =============== #
+hw5/HW5_S120085/Temp/
+hw5/HW5_S120085/Library/
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+hw5/HW5_S120085/ExportedObj/
+hw5/HW5_S120085/obj/
+hw5/HW5_S120085/*.svd
+hw5/HW5_S120085/*.userprefs
+hw5/HW5_S120085//*.csproj
+hw5/HW5_S120085/*.pidb
+hw5/HW5_S120085/*.suo
+hw5/HW5_S120085//*.sln
+hw5/HW5_S120085/*.user
+hw5/HW5_S120085/*.unityproj
+hw5/HW5_S120085/*.booproj
+
+# ============ #
+# OS generated #
+# ============ #
+hw5/HW5_S120085/.DS_Store
+hw5/HW5_S120085/.DS_Store?
+hw5/HW5_S120085/._*
+hw5/HW5_S120085/.Spotlight-V100
+hw5/HW5_S120085/.Trashes
+hw5/HW5_S120085/ehthumbs.db
+hw5/HW5_S120085/Thumbs.db

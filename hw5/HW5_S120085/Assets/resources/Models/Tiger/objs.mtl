@@ -1,0 +1,13 @@
+# Sogang Univ. Graphics Lab
+# File Created: 16.05.2019 16:05:43
+
+newmtl TigerMaterial
+	Ns 51
+	d 1
+	Tr 0
+	Tf 1 1 1
+	illum 2
+	Ka 0.24725 0.1995 0.0745
+	Kd 0.75164 0.60648 0.22648
+	Ks 0.628281 0.555802 0.366065
+
