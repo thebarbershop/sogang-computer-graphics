@@ -370,8 +370,8 @@ public class Shading : MonoBehaviour
         float frequency;
         float width;
         int draw_flag, effect_flag;
-        static float SCEEN_MAX_FREQUENCY = 50.0f;
-        static float SCEEN_MIN_FREQUENCY = 1.0f;
+        // static float SCREEN_MAX_FREQUENCY = 50.0f;
+        // static float SCREEN_MIN_FREQUENCY = 1.0f;
 
         public Screen(Material material_ps_default) : base(material_ps_default)
         {
@@ -1005,26 +1005,27 @@ public class Shading : MonoBehaviour
         initialize_lights_and_material();
 
         prepare_scene();
-        move_cameraLight();
     }
 
     Vector3 cam_direction = new Vector3(1, 1, 1);
+    float cam_speed = 10.0f;
 
     //카메라 이동. 점점 멀어지다가 일정 이상 멀어지면 다가간다.
     public void move_camera()
     {
-        /* TO DO : Move Camera 구현 */
-
+        Vector3 delta = cam_direction * cam_speed;
+        Camera cam = GetComponent<Camera>();
+        cam.transform.Translate(delta);
+        light_property[2].position += new Vector4(delta.x, delta.y, delta.z, 0.0f);
+        if (cam.transform.position.x < 0)
+            cam_direction = new Vector3(-1, -1, -1);
+        else if (cam.transform.position.x > 450)
+            cam_direction = new Vector3(1, 1, 1);
     }
     //카메라 회전. 네 방향을 회전한다.
     public void rotate_camera()
     {
         /* TO DO : Move Camera 구현 */
-    }
-
-    public void move_cameraLight()
-    {
-        /* TO DO : Light 2 움직임 구현 */
     }
 
     bool init = false;
