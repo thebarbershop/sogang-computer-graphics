@@ -4,6 +4,7 @@ using System.IO;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using customNamespace;
 
 public class Shading : MonoBehaviour
 {
@@ -251,12 +252,22 @@ public class Shading : MonoBehaviour
 
     public class Spider : PlayObject
     {
-        float rotation_angle = 0.0f;
+        Vector3 acceleration;
+        System.Random rnd;
+
+        bool flag_rotating;
+        float forceJump;
+        float speedRotation;
+        float directionAngle;
 
         public Spider(Material material_ps_default) : base(material_ps_default)
         {
             object_name = "Spider";
-            rotation_angle = 1f;
+            rnd = new System.Random();
+            forceJump = 150.0f;
+            speedRotation = 300.0f;
+            resetAcceleration();
+            flag_rotating = true;
             prepare_object(material_ps_default);
         }
 
@@ -297,22 +308,43 @@ public class Shading : MonoBehaviour
             base.set_material(material_ps_default);
         }
 
-        //Tiger 오브젝트 하단의 축
-
         public override void move()
         {
             base.move();
-            //위치 이동. 회전하는 물체이므로 원점을 기준으로 회전시킨다.
-            gameObject.transform.RotateAround(Vector3.zero, Vector3.up, -rotation_angle);
 
-            Vector4 spider_pos = gameObject.transform.position;
-            Quaternion spider_rotate = gameObject.transform.rotation;
+            if (flag_rotating)
+            {
+                gameObject.transform.Rotate(0.0f, speedRotation * Time.deltaTime, 0.0f, Space.Self);
+                float objectDirectionAngle = (float)(Math.Atan2(gameObject.transform.forward.z, gameObject.transform.forward.x) + Math.PI);
+                Debug.Log(String.Format("{0} {1}", objectDirectionAngle, directionAngle));
+                if (Global.fequals(objectDirectionAngle, directionAngle, 0.1f))
+                {
+                    gameObject.transform.forward.Set(acceleration.x, 0.0f, acceleration.z);
+                    gameObject.transform.forward.Normalize();
+                    flag_rotating = false;
+                }
+            }
 
+            else
+            {
+                acceleration += Physics.gravity;
+                gameObject.transform.Translate(acceleration * Time.deltaTime);
+                if (gameObject.transform.position.y < 0)
+                {   /* Spider reached the ground. */
+                    gameObject.transform.position.Set(gameObject.transform.position.x, 0, gameObject.transform.position.z);
+                    /* Reset acceleration */
+                    resetAcceleration();
+                    flag_rotating = true;
+                }
+            }
         }
 
-        public float getRotateAngle()
+        private void resetAcceleration()
         {
-            return rotation_angle;
+            float jumpAngle = (float)((rnd.NextDouble() + 1.0f) / 6.0f * Math.PI);
+            directionAngle = (float)(rnd.NextDouble() * 2.0f * Math.PI);
+            acceleration = new Vector3((float)Math.Cos(directionAngle), (float)Math.Sin(jumpAngle), (float)Math.Sin(directionAngle));
+            acceleration *= forceJump;
         }
     }
 
@@ -1171,5 +1203,25 @@ public class Shading : MonoBehaviour
         //focus를 잃으면 데이터가 사라진다.
         if (init)
             update_materials();
+    }
+}
+
+namespace customNamespace
+{
+    public static class Global
+    {
+        public static bool fequals(float a, float b, float epsilon = 0.0001f)
+        {
+            float absA = Math.Abs(a);
+            float absB = Math.Abs(b);
+            float diff = Math.Abs(a - b);
+
+            if (a.Equals(b))
+                return true;
+            else if (a == 0 || b == 0 || absA + absB < float.Epsilon)
+                return diff < (epsilon * float.Epsilon);
+            else
+                return diff / (absA + absB) < epsilon;
+        }
     }
 }
