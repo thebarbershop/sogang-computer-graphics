@@ -619,6 +619,8 @@ public class Shading : MonoBehaviour
         const float radiusMAX = 200.0f;
         const float radiusMin = 50.0f;
 
+        public int shader; // 0: Phong, 1: Gouraud
+
         public Wolf(Material material_ps_default) : base(material_ps_default)
         {
             object_name = "Wolf";
@@ -662,7 +664,18 @@ public class Shading : MonoBehaviour
 
         public override void set_material(Material material_ps_default)
         {
-            base.set_material(material_ps_default);
+            String shader_path = shader == 0 ? "HLSL/Phong_cg" : "HLSL/Gouraud_cg";
+            Material material = new Material(Shader.Find(shader_path));
+            material.CopyPropertiesFromMaterial(material_ps_default);   //기본 정보(빛 등)을 가져온다.
+
+            material.SetVector("u_material_ambient_color", material_parameter.ambient_color);
+            material.SetVector("u_material_diffuse_color", material_parameter.diffuse_color);
+            material.SetVector("u_material_specular_color", material_parameter.specular_color);
+            material.SetVector("u_material_emissive_color", material_parameter.emissive_color);
+
+            material.SetFloat("u_material_specular_exponent", material_parameter.specular_exponent);
+            Figure.GetComponent<Renderer>().material = material;
+
         }
 
         public override void move()
@@ -1117,6 +1130,11 @@ public class Shading : MonoBehaviour
         btn.GetComponentInChildren<Text>().text = "Stop Animation";
         b = btn.GetComponent<Button>();
         b.onClick.AddListener(delegate () { this.ButtonClicked((int)ButtonID.Stop_animation); });
+
+        btn = GameObject.Find("Button_wolf");
+        btn.GetComponentInChildren<Text>().text = "Wolf";
+        b = btn.GetComponent<Button>();
+        b.onClick.AddListener(delegate () { this.ButtonClicked((int)ButtonID.Wolf); });
     }
 
     //버튼 이벤트 처리
@@ -1176,6 +1194,10 @@ public class Shading : MonoBehaviour
 
             case (int)ButtonID.Stop_animation:
                 animationFlag = 1 - animationFlag;
+                break;
+
+            case (int)ButtonID.Wolf:
+                wolf.shader = 1 - wolf.shader;
                 break;
 
         }
