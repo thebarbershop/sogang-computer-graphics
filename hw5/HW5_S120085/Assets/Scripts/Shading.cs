@@ -234,13 +234,8 @@ public class Shading : MonoBehaviour
             Vector4 light_pos = light_property[3].position_default;
             Vector3 light_dir = light_property[3].spot_direction;
 
-            light_property[3].position = light_pos + tiger_pos;
-            light_property[3].spot_direction = tiger_rotate * light_dir;
-
-            Vector3 tangentVector = Vector3.Cross(Vector3.down, tiger_pos);
-            tangentVector.y = -1;
-            light_property[3].spot_direction = tangentVector;
-
+            light_property[3].position = tiger_pos + new Vector4(0, 1, 0, 0);
+            // light_property[3].spot_direction = tiger_rotate * light_dir;
         }
 
         public float getRotateAngle()
@@ -315,7 +310,6 @@ public class Shading : MonoBehaviour
             {
                 gameObject.transform.Rotate(0.0f, speedRotation * Time.deltaTime, 0.0f, Space.Self);
                 float objectDirectionAngle = (float)(Math.Atan2(gameObject.transform.forward.z, gameObject.transform.forward.x) + Math.PI);
-                Debug.Log(String.Format("{0} {1}", objectDirectionAngle, directionAngle));
                 if (Global.fequals(objectDirectionAngle, directionAngle, 0.1f))
                 {
                     gameObject.transform.forward.Set(acceleration.x, 0.0f, acceleration.z);
@@ -894,6 +888,57 @@ public class Shading : MonoBehaviour
 
         light_property[1].spot_cutoff_angle = 20.0f;//스포트 라이트 각도 20도
         light_property[1].spot_exponent = 27.0f;
+
+        // 2번 광원: 바닥 전체를 넓게 비치는 스포트라이트
+        light_property[2].Pos_Type = COORD_EC;
+        light_property[2].Light_Type = Light_Spot;
+        light_property[2].light_on = 1;
+        light_property[2].slit_count = 0;
+
+        light_property[2].position[0] = 100.0f; light_property[2].position[1] = 50.0f;  // point light position in EC
+        light_property[2].position[2] = 100.0f; light_property[2].position[3] = 1.0f;
+
+
+        light_property[2].ambient_color[0] = 0xFF / 255.0f; light_property[2].ambient_color[1] = 0x45 / 255.0f;
+        light_property[2].ambient_color[2] = 0x00 / 255.0f; light_property[2].ambient_color[3] = 1.0f;
+
+        light_property[2].diffuse_color[0] = 0xFF / 255.0f; light_property[2].diffuse_color[1] = 0x45 / 255.0f;
+        light_property[2].diffuse_color[2] = 0x00 / 255.0f; light_property[2].diffuse_color[3] = 1.0f;
+
+        light_property[2].specular_color[0] = 0xFF / 255.0f; light_property[2].specular_color[1] = 0x45 / 255.0f;
+        light_property[2].specular_color[2] = 0x00 / 255.0f; light_property[2].specular_color[3] = 1.0f;
+
+        light_property[2].spot_direction[0] = 0.0f; light_property[2].spot_direction[1] = -1.0f; // spot light direction in EC
+        light_property[2].spot_direction[2] = 0.0f;
+
+        light_property[2].spot_cutoff_angle = 90.0f;//스포트 라이트 각도 90도
+        light_property[2].spot_exponent = 2.0f;
+
+        // 3번 광원: 호랑이 위를 비추는 스포트라이트
+        light_property[3].Pos_Type = COORD_MC;
+        light_property[3].Light_Type = Light_Spot;
+        light_property[3].light_on = 1;
+        light_property[3].slit_count = 0;
+
+        light_property[3].position[0] = 0.0f; light_property[3].position[1] = 10.0f;  // point light position in EC
+        light_property[3].position[2] = 0.0f; light_property[3].position[3] = 1.0f;
+
+        light_property[3].ambient_color[0] = 0xDD / 255.0f; light_property[3].ambient_color[1] = 0xDD / 255.0f;
+        light_property[3].ambient_color[2] = 0xDD / 255.0f; light_property[3].ambient_color[3] = 1.0f;
+
+        light_property[3].diffuse_color[0] = 0xFF / 255.0f; light_property[3].diffuse_color[1] = 0x45 / 255.0f;
+        light_property[3].diffuse_color[2] = 0xFF / 255.0f; light_property[3].diffuse_color[3] = 1.0f;
+
+        light_property[3].specular_color[0] = 0xFF / 255.0f; light_property[3].specular_color[1] = 0x45 / 255.0f;
+        light_property[3].specular_color[2] = 0xFF / 255.0f; light_property[3].specular_color[3] = 1.0f;
+
+        light_property[3].spot_direction[0] = 0.0f; light_property[3].spot_direction[1] = -1.0f; // spot light direction in EC
+        light_property[3].spot_direction[2] = 0.0f;
+
+        light_property[3].spot_cutoff_angle = 10.0f;//스포트 라이트 각도 10도
+        light_property[3].spot_exponent = 2.0f;
+
+
 
         // need to supply position in EC for shading
         Camera cam = GetComponent<Camera>();//카메라가 중점을 바라보도록
