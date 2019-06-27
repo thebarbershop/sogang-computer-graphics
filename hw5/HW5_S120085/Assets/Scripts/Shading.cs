@@ -8,7 +8,6 @@ using customNamespace;
 
 public class Shading : MonoBehaviour
 {
-
     static readonly int NUMBER_OF_LIGHT_SUPPORTED = 4;
 
     public struct Material_Parameters
@@ -83,6 +82,7 @@ public class Shading : MonoBehaviour
     Screen screen;
     Ben ben;
     Spider spider;
+    Wolf wolf;
 
     public class PlayObject
     {
@@ -167,7 +167,6 @@ public class Shading : MonoBehaviour
 
             N_FRAME = 12;
             now_frame = 0;
-
             meshes = new Mesh[N_FRAME];
 
             for (int i = 0; i < N_FRAME; i++)
@@ -277,8 +276,8 @@ public class Shading : MonoBehaviour
             //Spider 색상 데이터 설정
             material_parameter = new Material_Parameters();
             material_parameter.ambient_color = new Vector4(0.24725f, 0.1995f, 0.0745f, 1.0f);
-            material_parameter.diffuse_color = new Vector4(0.75164f, 0.60648f, 0.22648f, 1.0f);
-            material_parameter.specular_color = new Vector4(0.628281f, 0.555802f, 0.366065f, 1.0f);
+            material_parameter.diffuse_color = new Vector4(0xDC / 255.0f, 0x14 / 255.0f, 0x3C / 255.0f, 1.0f);
+            material_parameter.specular_color = new Vector4(0.628281f / 2, 0.555802f / 2, 0.366065f / 2, 1.0f);
             material_parameter.specular_exponent = 51.2f;
             material_parameter.emissive_color = new Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 
@@ -362,7 +361,7 @@ public class Shading : MonoBehaviour
             //floor의 색상 데이터 설정
             material_parameter = new Material_Parameters();
             material_parameter.ambient_color = new Vector4(0.0f, 0.05f, 0.0f, 1.0f);  //자체적으로 발하는 색상(어두울때 색). 자체 색상 거의 없음.
-            material_parameter.diffuse_color = new Vector4(0.4f, 0.5f, 0.4f, 1.0f);//광원과 물체 사이에서 발하는 색. 보는 방량에 무관.
+            material_parameter.diffuse_color = new Vector4(0.4f, 0.5f, 0.4f, 1.0f);//광원과 물체 사이에서 발하는 색. 보는 방향에 무관.
             material_parameter.specular_color = new Vector4(0.04f, 0.7f, 0.04f, 1.0f);//광택. 빛을 받고 카메라 방향에 영향을 받는 색.
             material_parameter.specular_exponent = 2.5f;
             material_parameter.emissive_color = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);//공간의 색. 그냥 더해지는 색. 색 없음
@@ -618,6 +617,84 @@ public class Shading : MonoBehaviour
         }
     }
 
+    public class Wolf : PlayObject
+    {
+        uint timer;
+        float radius;
+        int radiusDirection;
+        const float radiusMAX = 200.0f;
+        const float radiusMin = 50.0f;
+
+        public Wolf(Material material_ps_default) : base(material_ps_default)
+        {
+            object_name = "Wolf";
+            timer = 0;
+            radius = radiusMin;
+            radiusDirection = 1;
+            prepare_object(material_ps_default);
+        }
+
+        //wolf 오브젝트 생성 및 색상 설정
+        new void prepare_object(Material material_ps_default)
+        {
+            //Wolf 색상 데이터 설정
+            material_parameter = new Material_Parameters();
+            material_parameter.ambient_color = new Vector4(0.24725f, 0.1995f, 0.0745f, 1.0f);
+            material_parameter.diffuse_color = new Vector4(0x69 / 255.0f, 0x69 / 255.0f, 0x69 / 255.0f, 1.0f);
+            material_parameter.specular_color = new Vector4(0.628281f / 3, 0.555802f / 3, 0.366065f / 3, 1.0f);
+            material_parameter.specular_exponent = 51.2f;
+            material_parameter.emissive_color = new Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+
+            N_FRAME = 17;
+            now_frame = 0;
+
+            meshes = new Mesh[N_FRAME];
+
+            for (int i = 0; i < N_FRAME; i++)
+            {
+                String currentFrame = String.Format("{0:000000}", i + 1);
+                GameObject frame = Resources.Load("Models/Wolf/wolf_" + currentFrame) as GameObject;
+                Mesh frameMesh = frame.transform.Find("default").GetComponent<MeshFilter>().sharedMesh;
+                meshes[i] = frameMesh;
+            }
+
+            GameObject gObject = GameObject.Find(object_name);
+            Figure = gObject.transform.Find("default");
+
+            gameObject = gObject;
+
+            set_material(material_ps_default);
+        }
+
+        public override void set_material(Material material_ps_default)
+        {
+            base.set_material(material_ps_default);
+        }
+
+        public override void move()
+        {
+            base.move();
+            ++timer;
+            if (timer >= 0b01111111)
+                timer = 0;
+            float x = (float)Math.Cos(timer / 10.0f) * radius;
+            float y = 0.0f;
+            float z = (float)Math.Sin(timer / 10.0f) * radius;
+
+            radius = radius * (1.0f + radiusDirection * 0.01f);
+            if (radius > radiusMAX)
+                radiusDirection = -1;
+            if (radius < radiusMin)
+                radiusDirection = 1;
+
+            Vector3 previousPosition = gameObject.transform.position;
+            Vector3 newPosition = new Vector3(x, y, z);
+            gameObject.transform.position = newPosition;
+            gameObject.transform.forward = newPosition - previousPosition;
+        }
+    }
+
+
     void initialize_lights_and_material()
     {
         material_ps_default = new Material(Shader.Find("HLSL/Phong_cg"));
@@ -863,12 +940,14 @@ public class Shading : MonoBehaviour
         tiger = new Tiger(material_ps_default);
         ben = new Ben(material_ps_default);
         spider = new Spider(material_ps_default);
+        wolf = new Wolf(material_ps_default);
 
         playObjectList.Add(floor);
         playObjectList.Add(tiger);
         playObjectList.Add(screen);
         playObjectList.Add(ben);
         playObjectList.Add(spider);
+        playObjectList.Add(wolf);
     }
 
     //초기화 수행.
