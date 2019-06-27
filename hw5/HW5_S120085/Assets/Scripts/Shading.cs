@@ -1273,9 +1273,9 @@ public class Shading : MonoBehaviour
         {
             if (exotic_direction == 1)
             {
-                if (light_property[1].slit_count < 1000)
+                if (light_property[1].slit_count < 15)
                 {
-                    light_property[1].slit_count *= (2);
+                    light_property[1].slit_count += 0.1f;
                     if (light_property[1].slit_count <= 1)
                     {
                         light_property[1].slit_count = 1;
@@ -1290,7 +1290,7 @@ public class Shading : MonoBehaviour
             {
                 if (light_property[1].slit_count > 1)
                 {
-                    light_property[1].slit_count /= (2);
+                    light_property[1].slit_count -= 0.1f;
                 }
                 else
                 {
