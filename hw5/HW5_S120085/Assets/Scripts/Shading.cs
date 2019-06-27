@@ -229,7 +229,7 @@ public class Shading : MonoBehaviour
 
             //호랑이 머리에 고정된 광원
             Vector4 tiger_pos = gameObject.transform.position;
-            light_property[3].position = tiger_pos + new Vector4(0.0f, 0.5f, 0.0f, 0.0f);
+            light_property[3].position = tiger_pos + new Vector4(0.0f, 10.0f, 0.0f, 0.0f);
         }
 
         public float getRotateAngle()
@@ -381,8 +381,8 @@ public class Shading : MonoBehaviour
         float frequency;
         float width;
         int draw_flag, effect_flag;
-        // static float SCREEN_MAX_FREQUENCY = 50.0f;
-        // static float SCREEN_MIN_FREQUENCY = 1.0f;
+        static float SCREEN_MAX_FREQUENCY = 64.0f;
+        static float SCREEN_MIN_FREQUENCY = 1.0f;
 
         public Screen(Material material_ps_default) : base(material_ps_default)
         {
@@ -392,7 +392,7 @@ public class Shading : MonoBehaviour
 
         void prepare_screen(Material material_ps_default)
         {
-            frequency = 1.0f;
+            frequency = SCREEN_MIN_FREQUENCY;
             width = 0.125f;
             draw_flag = 1;
             effect_flag = 0;
@@ -429,13 +429,9 @@ public class Shading : MonoBehaviour
         {
             draw_flag = 1 - draw_flag;
             if (draw_flag == 1)
-            {
                 gameObject.SetActive(true);
-            }
             else
-            {
                 gameObject.SetActive(false);
-            }
         }
 
         public void changeScreenEffect()
@@ -445,12 +441,22 @@ public class Shading : MonoBehaviour
 
         public void freq_up()
         {
-            /* TO DO : screen frequency ++ 구현 */
+            if (effect_flag == 1)
+            {
+                frequency *= 2.0f;
+                if (frequency > SCREEN_MAX_FREQUENCY)
+                    frequency = SCREEN_MAX_FREQUENCY;
+            }
         }
 
         public void freq_down()
         {
-            /* TO DO : screen frequency -- 구현 */
+            if (effect_flag == 1)
+            {
+                frequency /= 2.0f;
+                if (frequency < SCREEN_MIN_FREQUENCY)
+                    frequency = SCREEN_MIN_FREQUENCY;
+            }
         }
 
     }
@@ -945,23 +951,23 @@ public class Shading : MonoBehaviour
         light_property[3].light_on = 1;
         light_property[3].slit_count = 0;
 
-        light_property[3].position[0] = 0.0f; light_property[3].position[1] = 1.0f;  // spot light position in EC
+        light_property[3].position[0] = 0.0f; light_property[3].position[1] = 10.0f;  // spot light position in EC
         light_property[3].position[2] = 0.0f; light_property[3].position[3] = 1.0f;
 
-        light_property[3].ambient_color[0] = 0xDD / 255.0f; light_property[3].ambient_color[1] = 0xDD / 255.0f;
-        light_property[3].ambient_color[2] = 0xDD / 255.0f; light_property[3].ambient_color[3] = 1.0f;
+        light_property[3].ambient_color[0] = 0x00 / 255.0f; light_property[3].ambient_color[1] = 0x00 / 255.0f;
+        light_property[3].ambient_color[2] = 0x00 / 255.0f; light_property[3].ambient_color[3] = 1.0f;
 
-        light_property[3].diffuse_color[0] = 0xFF / 255.0f; light_property[3].diffuse_color[1] = 0x45 / 255.0f;
+        light_property[3].diffuse_color[0] = 0xFF / 255.0f; light_property[3].diffuse_color[1] = 0xFF / 255.0f;
         light_property[3].diffuse_color[2] = 0xFF / 255.0f; light_property[3].diffuse_color[3] = 1.0f;
 
-        light_property[3].specular_color[0] = 0xFF / 255.0f; light_property[3].specular_color[1] = 0x45 / 255.0f;
+        light_property[3].specular_color[0] = 0xFF / 255.0f; light_property[3].specular_color[1] = 0xFF / 255.0f;
         light_property[3].specular_color[2] = 0xFF / 255.0f; light_property[3].specular_color[3] = 1.0f;
 
-        light_property[3].spot_direction[0] = 0.0f; light_property[3].spot_direction[1] = -1.0f; // spot light direction in EC
+        light_property[3].spot_direction[0] = 0.0f; light_property[3].spot_direction[1] = -1.0f; // spot light direction in MC
         light_property[3].spot_direction[2] = 0.0f;
 
         light_property[3].spot_cutoff_angle = 10.0f;//스포트 라이트 각도 10도
-        light_property[3].spot_exponent = 1.0f;
+        light_property[3].spot_exponent = 10.0f;
 
 
 

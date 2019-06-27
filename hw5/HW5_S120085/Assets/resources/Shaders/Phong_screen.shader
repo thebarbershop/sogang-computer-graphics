@@ -42,6 +42,11 @@
 				float2 v_tex_coord : TEXCOORD0;
 			};
 
+			float mod(float a, float b)
+			{
+				return a - b * (int)(a/b);
+			}
+
 			v2f vert(appdata i)
 			{
 				v2f o;
@@ -64,7 +69,12 @@
 				y = abs(i.v_position_sc.y);
 
 				if (screen_effect == 1) {
-					/* TO DO : Screen Effect 구현*/
+					float x_mod, y_mod;
+					x_mod = mod(x*screen_frequency, 1.0f);
+					y_mod = mod(y*screen_frequency, 1.0f);
+					if((x_mod > screen_width) && (x_mod <  1.0f - screen_width) && (y_mod > screen_width) && (y_mod <  1.0f - screen_width)) {
+						discard;
+					}
 				}
 
 

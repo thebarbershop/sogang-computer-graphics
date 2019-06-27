@@ -79,7 +79,7 @@
 
 			#define FOG_COLOR float4(0.7, 0.7, 0.7, 1.0)
 			#define FOG_NEAR_DISTANCE 350.0
-			#define FOG_FAR_DISTANCE 700.0
+			#define FOG_FAR_DISTANCE 600.0
 			
 			fixed4 mix(fixed4 color1, fixed4 color2, float factor) {//두 색을 섞는 함수. r = x * (1-a) + y*a
 				fixed4 result;
