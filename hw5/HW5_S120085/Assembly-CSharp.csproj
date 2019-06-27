@@ -72,6 +72,8 @@
      <None Include="Assets\resources\Data\Wolf_15.txt" />
      <None Include="Assets\resources\Data\Wolf_03.txt" />
      <None Include="Assets\resources\Shaders\Gouraud_cg.shader" />
+     <None Include="Assets\resources\Shaders\Spider2_cg.shader" />
+     <None Include="Assets\resources\Shaders\Spider1_cg.shader" />
      <None Include="Assets\resources\Data\Wolf_06.txt" />
      <None Include="Assets\resources\Data\Wolf_01.txt" />
      <None Include="Assets\resources\Data\Wolf_13.txt" />

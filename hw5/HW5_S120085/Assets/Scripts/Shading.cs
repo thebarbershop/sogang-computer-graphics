@@ -249,6 +249,7 @@ public class Shading : MonoBehaviour
         float directionAngle;
 
         public int shader;
+        public int fog;
 
         public Spider(Material material_ps_default) : base(material_ps_default)
         {
@@ -259,6 +260,7 @@ public class Shading : MonoBehaviour
             resetAcceleration();
             flag_rotating = true;
             shader = 0;
+            fog = 1;
             prepare_object(material_ps_default);
         }
 
@@ -268,9 +270,9 @@ public class Shading : MonoBehaviour
             //Spider 색상 데이터 설정
             material_parameter = new Material_Parameters();
             material_parameter.ambient_color = new Vector4(0.24725f, 0.1995f, 0.0745f, 1.0f);
-            material_parameter.diffuse_color = new Vector4(0xDC / 255.0f, 0x14 / 255.0f, 0x3C / 255.0f, 1.0f);
-            material_parameter.specular_color = new Vector4(0.628281f / 2, 0.555802f / 2, 0.366065f / 2, 1.0f);
-            material_parameter.specular_exponent = 51.2f;
+            material_parameter.diffuse_color = new Vector4(0xDC / 55.0f, 0x14 / 55.0f, 0x3C / 55.0f, 1.0f);
+            material_parameter.specular_color = new Vector4(0.628281f, 0.555802f, 0.366065f, 1.0f);
+            material_parameter.specular_exponent = 10.2f;
             material_parameter.emissive_color = new Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 
             N_FRAME = 16;
@@ -296,7 +298,7 @@ public class Shading : MonoBehaviour
 
         public override void set_material(Material material_ps_default)
         {
-            String shader_path = "HLSL/Phong_cg";
+            String shader_path = (shader == 0) ? "HLSL/Spider1_cg" : "HLSL/Spider2_cg";
             Material material = new Material(Shader.Find(shader_path));
             material.CopyPropertiesFromMaterial(material_ps_default);   //기본 정보(빛 등)을 가져온다.
 
@@ -306,17 +308,9 @@ public class Shading : MonoBehaviour
             material.SetVector("u_material_emissive_color", material_parameter.emissive_color);
 
             material.SetFloat("u_material_specular_exponent", material_parameter.specular_exponent);
+            material.SetInt("u_flag_fog", fog);
+
             Figure.GetComponent<Renderer>().material = material;
-
-            if (shader == 1)
-            {
-                Texture2D m_MainTexture = (Texture2D)Resources.Load("Models/Tiger/tiger_tex2");
-
-                Figure.GetComponent<Renderer>().material.SetTexture("u_base_texture", m_MainTexture);
-                Figure.GetComponent<Renderer>().material.SetInt("u_flag_texture_mapping", 1);
-            }
-            else
-                Figure.GetComponent<Renderer>().material.SetInt("u_flag_texture_mapping", 0);
         }
 
         public override void move()
@@ -1158,6 +1152,12 @@ public class Shading : MonoBehaviour
         btn.GetComponentInChildren<Text>().text = "Spider";
         b = btn.GetComponent<Button>();
         b.onClick.AddListener(delegate () { this.ButtonClicked((int)ButtonID.Spider); });
+
+        btn = GameObject.Find("Button_more1");
+        btn.GetComponentInChildren<Text>().text = "More1";
+        b = btn.GetComponent<Button>();
+        b.onClick.AddListener(delegate () { this.ButtonClicked((int)ButtonID.More1); });
+
     }
 
     //버튼 이벤트 처리
@@ -1226,6 +1226,10 @@ public class Shading : MonoBehaviour
             case (int)ButtonID.Spider:
                 spider.shader = 1 - spider.shader;
                 break;
+            case (int)ButtonID.More1:
+                spider.fog = 1 - spider.fog;
+                break;
+
 
         }
 
