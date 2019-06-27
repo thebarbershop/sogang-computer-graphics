@@ -229,13 +229,7 @@ public class Shading : MonoBehaviour
 
             //호랑이 머리에 고정된 광원
             Vector4 tiger_pos = gameObject.transform.position;
-            Quaternion tiger_rotate = gameObject.transform.rotation;
-
-            Vector4 light_pos = light_property[3].position_default;
-            Vector3 light_dir = light_property[3].spot_direction;
-
-            light_property[3].position = tiger_pos + new Vector4(0, 1, 0, 0);
-            // light_property[3].spot_direction = tiger_rotate * light_dir;
+            light_property[3].position = tiger_pos + new Vector4(0.0f, 0.5f, 0.0f, 0.0f);
         }
 
         public float getRotateAngle()
@@ -254,6 +248,8 @@ public class Shading : MonoBehaviour
         float speedRotation;
         float directionAngle;
 
+        public int shader;
+
         public Spider(Material material_ps_default) : base(material_ps_default)
         {
             object_name = "Spider";
@@ -262,6 +258,7 @@ public class Shading : MonoBehaviour
             speedRotation = 300.0f;
             resetAcceleration();
             flag_rotating = true;
+            shader = 0;
             prepare_object(material_ps_default);
         }
 
@@ -299,7 +296,27 @@ public class Shading : MonoBehaviour
 
         public override void set_material(Material material_ps_default)
         {
-            base.set_material(material_ps_default);
+            String shader_path = "HLSL/Phong_cg";
+            Material material = new Material(Shader.Find(shader_path));
+            material.CopyPropertiesFromMaterial(material_ps_default);   //기본 정보(빛 등)을 가져온다.
+
+            material.SetVector("u_material_ambient_color", material_parameter.ambient_color);
+            material.SetVector("u_material_diffuse_color", material_parameter.diffuse_color);
+            material.SetVector("u_material_specular_color", material_parameter.specular_color);
+            material.SetVector("u_material_emissive_color", material_parameter.emissive_color);
+
+            material.SetFloat("u_material_specular_exponent", material_parameter.specular_exponent);
+            Figure.GetComponent<Renderer>().material = material;
+
+            if (shader == 1)
+            {
+                Texture2D m_MainTexture = (Texture2D)Resources.Load("Models/Tiger/tiger_tex2");
+
+                Figure.GetComponent<Renderer>().material.SetTexture("u_base_texture", m_MainTexture);
+                Figure.GetComponent<Renderer>().material.SetInt("u_flag_texture_mapping", 1);
+            }
+            else
+                Figure.GetComponent<Renderer>().material.SetInt("u_flag_texture_mapping", 0);
         }
 
         public override void move()
@@ -627,6 +644,7 @@ public class Shading : MonoBehaviour
             timer = 0;
             radius = radiusMin;
             radiusDirection = 1;
+            shader = 0;
             prepare_object(material_ps_default);
         }
 
@@ -908,8 +926,8 @@ public class Shading : MonoBehaviour
         light_property[2].light_on = 1;
         light_property[2].slit_count = 0;
 
-        light_property[2].position[0] = 100.0f; light_property[2].position[1] = 50.0f;  // point light position in EC
-        light_property[2].position[2] = 100.0f; light_property[2].position[3] = 1.0f;
+        light_property[2].position[0] = -250.0f; light_property[2].position[1] = 5.0f;  // spot light position in EC
+        light_property[2].position[2] = -250.0f; light_property[2].position[3] = 1.0f;
 
 
         light_property[2].ambient_color[0] = 0xFF / 255.0f; light_property[2].ambient_color[1] = 0x45 / 255.0f;
@@ -924,8 +942,8 @@ public class Shading : MonoBehaviour
         light_property[2].spot_direction[0] = 0.0f; light_property[2].spot_direction[1] = -1.0f; // spot light direction in EC
         light_property[2].spot_direction[2] = 0.0f;
 
-        light_property[2].spot_cutoff_angle = 90.0f;//스포트 라이트 각도 90도
-        light_property[2].spot_exponent = 2.0f;
+        light_property[2].spot_cutoff_angle = 45.0f;//스포트 라이트 각도 90도
+        light_property[2].spot_exponent = 1.0f;
 
         // 3번 광원: 호랑이 위를 비추는 스포트라이트
         light_property[3].Pos_Type = COORD_MC;
@@ -933,7 +951,7 @@ public class Shading : MonoBehaviour
         light_property[3].light_on = 1;
         light_property[3].slit_count = 0;
 
-        light_property[3].position[0] = 0.0f; light_property[3].position[1] = 10.0f;  // point light position in EC
+        light_property[3].position[0] = 0.0f; light_property[3].position[1] = 1.0f;  // spot light position in EC
         light_property[3].position[2] = 0.0f; light_property[3].position[3] = 1.0f;
 
         light_property[3].ambient_color[0] = 0xDD / 255.0f; light_property[3].ambient_color[1] = 0xDD / 255.0f;
@@ -949,7 +967,7 @@ public class Shading : MonoBehaviour
         light_property[3].spot_direction[2] = 0.0f;
 
         light_property[3].spot_cutoff_angle = 10.0f;//스포트 라이트 각도 10도
-        light_property[3].spot_exponent = 2.0f;
+        light_property[3].spot_exponent = 1.0f;
 
 
 
@@ -1135,6 +1153,11 @@ public class Shading : MonoBehaviour
         btn.GetComponentInChildren<Text>().text = "Wolf";
         b = btn.GetComponent<Button>();
         b.onClick.AddListener(delegate () { this.ButtonClicked((int)ButtonID.Wolf); });
+
+        btn = GameObject.Find("Button_spider");
+        btn.GetComponentInChildren<Text>().text = "Spider";
+        b = btn.GetComponent<Button>();
+        b.onClick.AddListener(delegate () { this.ButtonClicked((int)ButtonID.Spider); });
     }
 
     //버튼 이벤트 처리
@@ -1198,6 +1221,10 @@ public class Shading : MonoBehaviour
 
             case (int)ButtonID.Wolf:
                 wolf.shader = 1 - wolf.shader;
+                break;
+
+            case (int)ButtonID.Spider:
+                spider.shader = 1 - spider.shader;
                 break;
 
         }

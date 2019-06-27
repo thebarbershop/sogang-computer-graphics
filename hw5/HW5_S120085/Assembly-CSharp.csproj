@@ -62,6 +62,7 @@
      <None Include="Assets\resources\Data\Wolf_10.txt" />
      <None Include="Assets\resources\Models\Ben\ben_mat.txt" />
      <None Include="Assets\resources\Data\Wolf_11.txt" />
+     <None Include="Assets\resources\Shaders\Simple_cg.shader" />
      <None Include="Assets\resources\Shaders\Phong_cg.shader" />
      <None Include="Assets\resources\Data\Wolf_05.txt" />
      <None Include="Assets\resources\Shaders\Phong_screen.shader" />
@@ -71,7 +72,6 @@
      <None Include="Assets\resources\Data\Wolf_15.txt" />
      <None Include="Assets\resources\Data\Wolf_03.txt" />
      <None Include="Assets\resources\Shaders\Gouraud_cg.shader" />
-     <None Include="Assets\resources\Shaders\Simple_cg.shader" />
      <None Include="Assets\resources\Data\Wolf_06.txt" />
      <None Include="Assets\resources\Data\Wolf_01.txt" />
      <None Include="Assets\resources\Data\Wolf_13.txt" />
